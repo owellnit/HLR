@@ -1,0 +1,11 @@
+
+Bearbeitungszeit: 	5-6 Stunden
+Schwierigkeit: 		genau richtig
+Lehrreich: 		sehr
+Verständlichkeit: 	verständlich
+
+
+Kommentar: 
+Am Anfang einige Schwierigkeiten, aber mit der Zeit kommt man sehr gut mit gdb zurecht und kann sich gut durch die Programme debuggen. Besonders das pde-Programm hat für Anfänger gute Beispiele.
+
+

@@ -1,0 +1,29 @@
+1)
+Datei: askparams.c
+Zeile: 197
+
+Den Zugriffsindex von argV[333] auf argV[3] gesetzt, weil auf einen nicht vorhandenen Speicherbereich zugegriffen wurde. 
+Der Speicherbereich von argV hat die Größe 8. (sizeof(argV) = 8)
+
+
+2)
+Datei: partdiff-seq.c
+Zeile: 96
+
+Es wurde zu wenig Speicher für die Matrix reserviert. Der Speicherbereich wird jetzt statt mit 2 mit 3 multipliziert, damit genügend Speicher vorhanden ist.
+
+3)
+Datei: partdiff-seq.c
+Zeile: 233
+
+Die Index-Parameter wurden vertauscht, somit wurde auf nicht vorhandene Speicherbereiche zugegriffen.
+
+Matrix[j - 1][m2][i] -> Matrix[m2][i][j-1]
+
+4)
+Datei: partdiff-seq.c
+Zeilen: 164-172
+
+Der Speicherbereich der Matrix darf erst freigegeben werden, nachdem Matrix[1] und Matrix[2] freigegeben wurden, weil diese die Matrix selbst benötigen.
+
+Der Pointer M muss selbst auch freigegeben werden.

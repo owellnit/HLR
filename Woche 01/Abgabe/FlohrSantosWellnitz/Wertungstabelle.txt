@@ -1,0 +1,12 @@
+Wussten leider nicht, wie wir die Tabelle am geschicktesten hier einbauen.
+
+Bearbeitungszeit: 	3,5 Stunden
+Schwierigkeit: 		genau richtig
+Lehrreich: 		sehr
+Verständlichkeit: 	teilweise unklar
+
+
+Kommentar: 
+Eine Einleitung wie man am besten auf den jeweiligen Betriebssystemen C entwickelt fehlte. 
+
+

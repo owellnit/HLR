@@ -1,0 +1,14 @@
+mistake1 (Zeile: 11 - 24):
+Die lokale Variable buf vom Typ int-Array wird nach der Funktion verworfen und der Speicherbereich ist in der main nicht mehr zugreifbar. Darum wird ein Speicherbereich für buf reserviert (für die 6 int-Werte) und die int-Werte hineingeschrieben.
+
+mistake2 (Zeile: 28 - 36):
+Es wurde für buf ein Speicherbereich für vier char-Werte reserviert, es reicht aber ein Platz für zwei int-Werte. In der main wird auf den zweiten Wert zugegriffen und nicht auf den dritten. Darum muss die 2 in den zweiten Bereich geschrieben werden.
+
+mistake3 (Zeile: 40- 50):
+Es muss für buf nur Platz für einen int-Wert reserviert werden, mistake2_ ist genau ein int-Wert. Also reicht ein Speicherbereich mit der Größe sizeof(mistake2_).
+
+mistake4 (Zeile: 54-66):
+Es genügt wieder der Speicherbereich für einen int-Wert und es wird kein Platz für 4 char-Werte benötigt. Die 4 wird folglich an erster Stelle in buf geschrieben. Ebenfalls darf buf nicht in der Funktion freigegeben werden, weil dieser sonst in der main nicht mehr zugreifbar ist.
+
+main (ab Zeile 81):
+Am Ende müssen alle in den Methoden angeforderten Speicherbereiche freigegeben werden. Bei Pointern, die nicht auf die erste Stelle des Speicherbereiches zeigen, muss mittels p[index] - <Entfernung zur Startadresse> zurück zur ersten Adresse des Speicherbereichs gegangen werden, um den gesamten Bereich freizugeben. Der Wert, der an free(…) übergeben wird, muss die Startadresse des Bereichs sein.

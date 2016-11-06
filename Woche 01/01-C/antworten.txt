@@ -1,0 +1,8 @@
+1) 
+Der Befehl 'cd' ist ein Befehl von Bash, darum wird er auf der Manual-Page von Bash aufgelistet und hat somit keine eigene Manual-Page.
+    
+2) 
+Das Archiv benötigt mehr Speicher als das Verzeichnis selbst.
+    
+3) 
+Ja, mit 'tar cfvz [ARCHIV].tar.gz [VERZEICHNIS]

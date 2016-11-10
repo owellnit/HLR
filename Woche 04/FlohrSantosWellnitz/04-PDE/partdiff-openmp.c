@@ -26,6 +26,9 @@
 #include <math.h>
 #include <malloc.h>
 #include <sys/time.h>
+
+//OpenMP Bibliothek included, um die Funktionen von
+//OpenMP nutzen zu können
 #include <omp.h>
 
 #include "partdiff-openmp.h"
@@ -216,7 +219,8 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		fpisin = 0.25 * TWO_PI_SQUARE * h * h;
 	}
 	
-	omp_set_num_threads(options->number);  /*Setzen der Anzahl der Threads*/
+    //Anzahl der Threads festlegen
+	omp_set_num_threads(options->number);
 
 	while (term_iteration > 0)
 	{
@@ -225,11 +229,13 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 
 		maxresiduum = 0;
 
-		// over all rows 
-		// Schleife auf mehrere Threads verteilen
-		// Da maxresidium nicht nur auf einem Thread das maximum finden soll, sondern auf allen, haben wir das reduction statement verwendet. 
-		// Dies läuft etwas schneller als den Bereich in dem es verwendet wird als critical zu deklarieren.
-		#pragma omp parallel for private(star, residuum, i, j)  reduction(max:maxresiduum)
+		//over all rows
+        //Die For-Schleife soll über mehrere Threads aufgeteilt werden.
+        //Die Variablen star und residuum werden im Thread lokal für die Berechnung
+        //benötigt (-> private). Die Schleifen-Variablen sind automatisch private gesetz.
+        //Das Max des residuums soll jedoch über alle Threads ermittelt werden,
+        //deshalt wurde es als reduction angegeben.
+		#pragma omp parallel for private(star, residuum)  reduction(max:maxresiduum)
 		for (i = 1; i < N; i++)
 		{
 			double fpisin_i = 0.0;

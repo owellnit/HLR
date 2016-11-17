@@ -294,88 +294,91 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		fpisin = 0.25 * TWO_PI_SQUARE * h * h;
 	}
     
-    //Berechnung wie viele Reihen ein Thread berechnen muss
-    int reihenProThread = (N - 1) / options->number;
+    	//Berechnung wie viele Reihen ein Thread berechnen muss
+    	int reihenProThread = (N - 1) / options->number;
     
-    //Berechnung der Restreihen, die nicht auf die Threads aufgeteilt werden konnten
-    int restReihen = (N - 1) % options->number;
+    	//Berechnung der Restreihen, die nicht auf die Threads aufgeteilt werden konnten
+    	int restReihen = (N - 1) % options->number;
     
-    //Start- und End-Reihen für die einzelnen Threads
-    int ersteThreadReihe = 0;
-    int letzteThreadReihe = 0;
+    	//Start- und End-Reihen für die einzelnen Threads
+    	int ersteThreadReihe = 1;
+    	int letzteThreadReihe = 1;
 
-    //Zuweisung der festen Parameter für die einzelnen Threads
-    for(i = 0; i < options->number; i++)
-    {
-        //Berechnung der letzten Reihen, die in einem Thread berechnet werden muss
-        letzteThreadReihe = letzteThreadReihe + reihenProThread;
+    	//Zuweisung der festen Parameter für die einzelnen Threads
+    	for(i = 0; i < options->number; i++)
+    	{
+        	//Berechnung der letzten Reihen, die in einem Thread berechnet werden muss
+        	letzteThreadReihe += reihenProThread;
         
-        //Aufteilen der Restreihen, bis keine mehr zu Verüfugung stehen
-        if (restReihen > 0)
-        {
-            restReihen -=1;
-            letzteThreadReihe += 1;
-        }
+        	//Aufteilen der Restreihen, bis keine mehr zu Verüfugung stehen
+        	if (restReihen > 0)
+        	{
+            		restReihen -=1;
+            		letzteThreadReihe += 1;
+        	}
         
-        //Parameter zuweisen
-        thread_args[i].start_i = ersteThreadReihe;
-        thread_args[i].stop_i = letzteThreadReihe;
-        thread_args[i].inf_func = options->inf_func;
-        thread_args[i].term_iteration = &term_iteration;
-        thread_args[i].termination = options->termination;
-        thread_args[i].N = arguments->N;
-        thread_args[i].pih = &pih;
-        thread_args[i].fpisin = &fpisin;
+        	//Parameter zuweisen
+        	thread_args[i].start_i = ersteThreadReihe;
+        	thread_args[i].stop_i = letzteThreadReihe;
+        	thread_args[i].inf_func = options->inf_func;
+        	thread_args[i].term_iteration = &term_iteration;
+        	thread_args[i].termination = options->termination;
+        	thread_args[i].N = arguments->N;
+        	thread_args[i].pih = &pih;
+        	thread_args[i].fpisin = &fpisin;
         
-        //Berechnung der nächsten Startreihe
-        ersteThreadReihe = letzteThreadReihe + 1;
-    }
+        	//Berechnung der nächsten Startreihe
+        	ersteThreadReihe = letzteThreadReihe;
+    	}
+	
 	while (term_iteration > 0)
 	{
-        //Zuweisung der variablen Parameter und starten der Threads
-        for(i = 0; i < options->number; i++)
-        {
-            thread_args[i].maxresiduum = 0;
-            thread_args[i].inMatrix = arguments->Matrix[m2];
-            thread_args[i].outMatrix = arguments->Matrix[m1];
+       		//Zuweisung der variablen Parameter und starten der Threads
+        	for(i = 0; i < options->number; i++)
+        	{
+            		thread_args[i].maxresiduum = 0;
+            		thread_args[i].inMatrix = arguments->Matrix[m2];
+            		thread_args[i].outMatrix = arguments->Matrix[m1];
             
-            pthread_create(&threadArray[i], NULL, &doCalculate, &thread_args[i]);
-        }
+            		pthread_create(&threadArray[i], NULL, &doCalculate, &thread_args[i]);
+        	}
         
-        maxresiduum = 0;
-        results->stat_iteration++;
+        	maxresiduum = 0;
+        	results->stat_iteration++;
         
-        for(i = 0; i < options->number; i++)
-        {
-            if (pthread_join(threadArray[i], NULL))
-            {
-                fprintf(stderr, "%s\n", "pthread_join fehlgeschlagen");
-                return;
-            }
+        	for(i = 0; i < options->number; i++)
+        	{
+            	if (pthread_join(threadArray[i], NULL))
+            	{	
+                	fprintf(stderr, "%s\n", "pthread_join fehlgeschlagen");
+                	return;
+            	}
 
             maxresiduum = (thread_args[i].maxresiduum < maxresiduum) ? maxresiduum : thread_args[i].maxresiduum;
         }
         
         results->stat_precision = maxresiduum;
 
-		/* exchange m1 and m2 */
-		i = m1;
-		m1 = m2;
-		m2 = i;
+	/* exchange m1 and m2 */
+	i = m1;
+	m1 = m2;
+	m2 = i;
 
-		/* check for stopping calculation depending on termination method */
-		if (options->termination == TERM_PREC)
+	/* check for stopping calculation depending on termination method */
+	if (options->termination == TERM_PREC)
+	{
+		if (maxresiduum < options->term_precision)
 		{
-			if (maxresiduum < options->term_precision)
-			{
-				term_iteration = 0;
-			}
-		}
-		else if (options->termination == TERM_ITER)
-		{
-			term_iteration--;
+			term_iteration = 0;
 		}
 	}
+	else if (options->termination == TERM_ITER)
+	{
+		term_iteration--;
+	}
+	}
+    	free(thread_args);
+   	free(threadArray);
 
 	results->m = m2;
 }

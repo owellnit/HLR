@@ -303,36 +303,38 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
     //Start- und End-Reihen für die einzelnen Threads
     int ersteThreadReihe = 0;
     int letzteThreadReihe = 0;
-    
+
+    //Zuweisung der festen Parameter für die einzelnen Threads
+    for(i = 0; i < options->number; i++)
+    {
+        //Berechnung der letzten Reihen, die in einem Thread berechnet werden muss
+        letzteThreadReihe = letzteThreadReihe + reihenProThread;
+        
+        //Aufteilen der Restreihen, bis keine mehr zu Verüfugung stehen
+        if (restReihen > 0)
+        {
+            restReihen -=1;
+            letzteThreadReihe += 1;
+        }
+        
+        //Parameter zuweisen
+        thread_args[i].start_i = ersteThreadReihe;
+        thread_args[i].stop_i = letzteThreadReihe;
+        thread_args[i].inf_func = options->inf_func;
+        thread_args[i].term_iteration = &term_iteration;
+        thread_args[i].termination = options->termination;
+        thread_args[i].N = arguments->N;
+        thread_args[i].pih = &pih;
+        thread_args[i].fpisin = &fpisin;
+        
+        //Berechnung der nächsten Startreihe
+        ersteThreadReihe = letzteThreadReihe + 1;
+    }
 	while (term_iteration > 0)
 	{
-
-        //Zuweisung der Parameter für die einzelnen Threads und starten der Threads
+        //Zuweisung der variablen Parameter und starten der Threads
         for(i = 0; i < options->number; i++)
         {
-            //Berechnung der letzten Reihen, die in einem Thread berechnet werden muss
-            letzteThreadReihe = letzteThreadReihe + reihenProThread;
-            
-            //Aufteilen der Restreihen, bis keine mehr zu Verüfugung stehen
-            if (restReihen > 0)
-            {
-                restReihen -=1;
-                letzteThreadReihe += 1;
-            }
-            
-            //Parameter zuweisen
-            thread_args[i].start_i = ersteThreadReihe;
-            thread_args[i].stop_i = letzteThreadReihe;
-            thread_args[i].inf_func = options->inf_func;
-            thread_args[i].term_iteration = &term_iteration;
-            thread_args[i].termination = options->termination;
-            thread_args[i].N = arguments->N;
-            thread_args[i].pih = &pih;
-            thread_args[i].fpisin = &fpisin;
-            
-            //Berechnung der nächsten Startreihe
-            ersteThreadReihe = letzteThreadReihe + 1;
-        
             thread_args[i].maxresiduum = 0;
             thread_args[i].inMatrix = arguments->Matrix[m2];
             thread_args[i].outMatrix = arguments->Matrix[m1];

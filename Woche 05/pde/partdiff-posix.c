@@ -196,9 +196,9 @@ initMatrices (struct calculation_arguments* arguments, struct options const* opt
 /* ************************************************************************ */
 /* calculate: Berechnung für einen Thread                                   */
 /* ************************************************************************ */
-void* doCalculate(void* args)
+void *doCalculate(void* args)
 {
-    struct calculation_part_arguments * arguments = (struct calculate_thread_arguments*) args;
+    struct calculate_thread_arguments * arguments = (struct calculate_thread_arguments*) args;
     
     double** Matrix_In = arguments->inMatrix;
     double** Matrix_Out = arguments->outMatrix;
@@ -260,16 +260,16 @@ static
 void
 calculate (struct calculation_arguments const* arguments, struct calculation_results* results, struct options const* options)
 {
-	int i, j;                                   /* local variables for loops */
+	unsigned int i;                                   /* local variables for loops */
 	int m1, m2;                                 /* used as indices for old and new matrices */
 	double maxresiduum;                         /* maximum residuum value of a slave in iteration */
 
 	int const N = arguments->N;
 	double const h = arguments->h;
     
-    //Thread-Array mit Anzahl der eingegebenne Threads
-    pthread_t threadArray[options->number];
-    calculate_thread_arguments thread_args[options->number]; //malloc(sizeof(calculate_thread_arguments) * options->number);
+	//Thread-Array mit Anzahl der eingegebenne Threads
+    	pthread_t* threadArray = malloc(sizeof(pthread_t) * options->number);
+    	struct calculate_thread_arguments* thread_args =  malloc(sizeof(struct calculate_thread_arguments) * options->number);
 
 	double pih = 0.0;
 	double fpisin = 0.0;
@@ -337,7 +337,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
             thread_args[i].inMatrix = arguments->Matrix[m2];
             thread_args[i].outMatrix = arguments->Matrix[m1];
             
-            pthread_create(&threads[i], NULL, &doCalculate, &thread_args[i]);
+            pthread_create(&threadArray[i], NULL, &doCalculate, &thread_args[i]);
         }
         
         maxresiduum = 0;
@@ -351,7 +351,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
                 return;
             }
 
-            maxresiduum = (args[i].maxresiduum < maxresiduum) ? maxresiduum : args[i].maxresiduum;
+            maxresiduum = (thread_args[i].maxresiduum < maxresiduum) ? maxresiduum : thread_args[i].maxresiduum;
         }
         
         results->stat_precision = maxresiduum;

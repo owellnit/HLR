@@ -30,7 +30,8 @@
 
 #include "partdiff-posix.h"
 
-//pthread_mutex_t lock;
+//Lock-Variable
+pthread_mutex_t lock;
 
 struct calculation_arguments
 {
@@ -56,7 +57,7 @@ struct calculate_thread_arguments
     int 	spacesBetweenLines;    /* number of spaces between lines (lines=N+1)  */
     int 	firstRow;              /* Startreihe */
     int 	lastRow;               /* Letzte Reihe */
-    double   	maxresiduum;           /* Höchster Residuum Wert pro Thread */
+    double*   	maxresiduum;           /* Höchster Residuum Wert pro Thread */
     int* 	termIteration;         /* Anzahl der Schleifendurchläufe */
     uint64_t 	inferenceFunc;         /* Störfunktion */
     uint64_t 	termination;           /* Abbruchbedienung */
@@ -213,7 +214,7 @@ void *doCalculate(void* args)
     
     double star;
     double residuum = 0;
-    double maxresiduum = arguments->maxresiduum;
+    double* maxresiduum = arguments->maxresiduum;
     
     /* over all rows */
     for (int i = arguments->firstRow; i < lastRow; i++)
@@ -240,14 +241,19 @@ void *doCalculate(void* args)
                 residuum = Matrix_In[i][j] - star;
                 residuum = (residuum < 0) ? -residuum : residuum;
                
-		/*pthread_mutex_lock(&lock);
+		//pthread_mutex_lock(&lock);
 		if(residuum > *maxresiduum)
 		{
-			*maxresiduum = residuum;
+			pthread_mutex_lock(&lock);
+			if(residuum > *maxresiduum)
+			{
+				*maxresiduum = residuum;
+			}
+			pthread_mutex_unlock(&lock);
 		}
-		pthread_mutex_unlock(&lock);*/
+		//pthread_mutex_unlock(&lock);
 
-		maxresiduum = (residuum < maxresiduum) ? maxresiduum : residuum;
+		//*maxresiduum = (residuum < *maxresiduum) ? *maxresiduum : residuum;
             }
             
             Matrix_Out[i][j] = star;
@@ -343,14 +349,14 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
         	//Zuweisung der variablen Parameter und starten der Threads
         	for(i = 0; i < options->number; i++)
         	{
-                	thread_args[i].maxresiduum = 0;
+                	thread_args[i].maxresiduum = &maxresiduum;
                 	thread_args[i].matrixInput = arguments->Matrix[m2];
                 	thread_args[i].matrixOutput = arguments->Matrix[m1];
             
                		pthread_create(&threadArray[i], NULL, &doCalculate, &thread_args[i]);
         	}
         
-        	maxresiduum = 0;
+        	//maxresiduum = 0;
         	results->stat_iteration++;
         
         	//Alle Threads wieder zusammenführen und gemeinsames maxresiduum ermitteln
@@ -362,7 +368,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
                 		return;
             		}
 
-            		maxresiduum = (thread_args[i].maxresiduum < maxresiduum) ? maxresiduum : thread_args[i].maxresiduum;
+            		//maxresiduum = (thread_args[i].maxresiduum < maxresiduum) ? maxresiduum : thread_args[i].maxresiduum;
         	}
         
         	results->stat_precision = maxresiduum;

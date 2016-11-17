@@ -49,17 +49,17 @@ struct calculation_results
 //Struct, um mit den einzelnen Threads Daten auszutauschen
 struct calculate_thread_arguments
 {
-    double** inMatrix;  /* Matrix vor Berechnung */
-    double** outMatrix; /* Matrix nach Berechnung */
-    uint64_t inf_func; /* Störfunktion */
-    uint64_t termination; /* Abbruchbedienung */
-    int 	 N; /* number of spaces between lines (lines=N+1)  */
-    int 	 start_i; /* Startreihe */
-    int 	 stop_i; /* Letzte Reihe */
-    int* 	 term_iteration; /* Anzahl der Schleifendurchläufe */
-    double   maxresiduum; /* Höchster Residuum Wert pro Thread */
-    double*	 pih; /* Konstante für Störfunktion */
-    double*	 fpisin; /* Konstante für Störfunktion */
+    double** matrixInput;           /* Matrix vor Berechnung */
+    double** matrixOutput;          /* Matrix nach Berechnung */
+    int 	 spacesBetweenLines;    /* number of spaces between lines (lines=N+1)  */
+    int 	 firstRow;              /* Startreihe */
+    int 	 lastRow;               /* Letzte Reihe */
+    double   maxresiduum;           /* Höchster Residuum Wert pro Thread */
+    int 	 termIteration;         /* Anzahl der Schleifendurchläufe */
+    uint64_t inferenceFunc;         /* Störfunktion */
+    uint64_t termination;           /* Abbruchbedienung */
+    double*	 pih;                   /* Konstante für Störfunktion */
+    double*	 fpisin;                /* Konstante für Störfunktion */
 };
 
 /* ************************************************************************ */
@@ -198,30 +198,27 @@ initMatrices (struct calculation_arguments* arguments, struct options const* opt
 /* ************************************************************************ */
 void *doCalculate(void* args)
 {
+    //Cast der Übergebenen Argumente
     struct calculate_thread_arguments * arguments = (struct calculate_thread_arguments*) args;
     
-    double** Matrix_In = arguments->inMatrix;
-    double** Matrix_Out = arguments->outMatrix;
+    //Parameter aus Thread-Argumenten entnehmen
+    double** Matrix_In = arguments->matrix_Input;
+    double** Matrix_Out = arguments->matrix_Output;
+    int N = arguments->spacesBetweenLines;
+    int lastRow = arguments->lastRow;
+    double pih = *arguments->pih;
+    double fpisin = *arguments->fpisin;
     
     double star;
     double residuum = 0;
     double maxresiduum = 0;
     
-    int const N = arguments->N;
-    int const stop = arguments->stop_i;
-    int const term_iteration = *(arguments->term_iteration);
-    
-    uint64_t const inf_func = arguments->inf_func;
-    uint64_t const termination = arguments->termination;
-    
-    double const pih = *arguments->pih;
-    double const fpisin = *arguments->fpisin;
     /* over all rows */
-    for (int i = arguments->start_i; i < stop; i++)
+    for (int i = arguments->firstRow; i < lastRow; i++)
     {
         double fpisin_i = 0.0;
         
-        if (inf_func == FUNC_FPISIN)
+        if (arguments->inferenceFunc == FUNC_FPISIN)
         {
             fpisin_i = fpisin * sin(pih * (double)i);
         }
@@ -236,7 +233,7 @@ void *doCalculate(void* args)
                 star += fpisin_i * sin(pih * (double)j);
             }
             
-            if (termination == TERM_PREC || term_iteration == 1)
+            if (arguments->term_iteration == TERM_PREC || term_iteration == 1)
             {
                 residuum = Matrix_In[i][j] - star;
                 residuum = (residuum < 0) ? -residuum : residuum;
@@ -268,8 +265,8 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 	double const h = arguments->h;
     
 	//Thread-Array mit Anzahl der eingegebenne Threads
-    	pthread_t* threadArray = malloc(sizeof(pthread_t) * options->number);
-    	struct calculate_thread_arguments* thread_args =  malloc(sizeof(struct calculate_thread_arguments) * options->number);
+    pthread_t* threadArray = malloc(sizeof(pthread_t) * options->number);
+    struct calculate_thread_arguments* thread_args =  malloc(sizeof(struct calculate_thread_arguments) * options->number);
 
 	double pih = 0.0;
 	double fpisin = 0.0;
@@ -294,90 +291,92 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		fpisin = 0.25 * TWO_PI_SQUARE * h * h;
 	}
     
-    	//Berechnung wie viele Reihen ein Thread berechnen muss
-    	int reihenProThread = (N - 1) / options->number;
+    //Berechnung wie viele Reihen ein Thread berechnen muss
+    int rowsPerThread = (N - 1) / options->number;
     
-    	//Berechnung der Restreihen, die nicht auf die Threads aufgeteilt werden konnten
-    	int restReihen = (N - 1) % options->number;
+    //Berechnung der Restreihen, die nicht auf die Threads aufgeteilt werden konnten
+    int remainRows = (N - 1) % options->number;
     
-    	//Start- und End-Reihen für die einzelnen Threads
-    	int ersteThreadReihe = 1;
-    	int letzteThreadReihe = 1;
+    //Start- und End-Reihen für die einzelnen Threads
+    int firstThreadRow = 1;
+    int lastThreadRow = 1;
 
-    	//Zuweisung der festen Parameter für die einzelnen Threads
-    	for(i = 0; i < options->number; i++)
-    	{
-        	//Berechnung der letzten Reihen, die in einem Thread berechnet werden muss
-        	letzteThreadReihe += reihenProThread;
+    //Zuweisung der festen Parameter für die einzelnen Threads
+    for(i = 0; i < options->number; i++)
+    {
+        //Berechnung der letzten Reihen, die in einem Thread berechnet werden muss
+        lastThreadRow += rowsPerThread;
         
-        	//Aufteilen der Restreihen, bis keine mehr zu Verüfugung stehen
-        	if (restReihen > 0)
-        	{
-            		restReihen -=1;
-            		letzteThreadReihe += 1;
-        	}
+        //Aufteilen der Restreihen, bis keine mehr zu Verüfugung stehen
+        if (remainRows > 0)
+        {
+                remainRows -=1;
+                lastThreadRow += 1;
+        }
         
-        	//Parameter zuweisen
-        	thread_args[i].start_i = ersteThreadReihe;
-        	thread_args[i].stop_i = letzteThreadReihe;
-        	thread_args[i].inf_func = options->inf_func;
-        	thread_args[i].term_iteration = &term_iteration;
-        	thread_args[i].termination = options->termination;
-        	thread_args[i].N = arguments->N;
-        	thread_args[i].pih = &pih;
-        	thread_args[i].fpisin = &fpisin;
+        //Parameter zuweisen
+        thread_args[i].firstRow = firstThreadRow;
+        thread_args[i].lastRow = lastThreadRow;
+        thread_args[i].inferenceFunc = options->inf_func;
+        thread_args[i].term_iteration = &term_iteration;
+        thread_args[i].termination = options->termination;
+        thread_args[i].spacesBetweenLines = arguments->N;
+        thread_args[i].pih = &pih;
+        thread_args[i].fpisin = &fpisin;
         
-        	//Berechnung der nächsten Startreihe
-        	ersteThreadReihe = letzteThreadReihe;
-    	}
+        //Berechnung der nächsten Startreihe
+        firstThreadRow = lastThreadRow;
+    }
 	
-	while (term_iteration > 0)
-	{
-       		//Zuweisung der variablen Parameter und starten der Threads
-        	for(i = 0; i < options->number; i++)
-        	{
-            		thread_args[i].maxresiduum = 0;
-            		thread_args[i].inMatrix = arguments->Matrix[m2];
-            		thread_args[i].outMatrix = arguments->Matrix[m1];
+    while (term_iteration > 0)
+    {
+        //Zuweisung der variablen Parameter und starten der Threads
+        for(i = 0; i < options->number; i++)
+        {
+                thread_args[i].maxresiduum = 0;
+                thread_args[i].matrix_Input = arguments->Matrix[m2];
+                thread_args[i].matrix_Output = arguments->Matrix[m1];
             
-            		pthread_create(&threadArray[i], NULL, &doCalculate, &thread_args[i]);
-        	}
+                pthread_create(&threadArray[i], NULL, &doCalculate, &thread_args[i]);
+        }
         
-        	maxresiduum = 0;
-        	results->stat_iteration++;
+        maxresiduum = 0;
+        results->stat_iteration++;
         
-        	for(i = 0; i < options->number; i++)
-        	{
-            	if (pthread_join(threadArray[i], NULL))
-            	{	
-                	fprintf(stderr, "%s\n", "pthread_join fehlgeschlagen");
-                	return;
-            	}
+        //Alle Threads wieder zusammenführen und gemeinsames maxresiduum ermitteln
+        for(i = 0; i < options->number; i++)
+        {
+            if (pthread_join(threadArray[i], NULL))
+            {
+                fprintf(stderr, "%s\n", "pthread_join fehlgeschlagen");
+                return;
+            }
 
             maxresiduum = (thread_args[i].maxresiduum < maxresiduum) ? maxresiduum : thread_args[i].maxresiduum;
         }
         
         results->stat_precision = maxresiduum;
 
-	/* exchange m1 and m2 */
-	i = m1;
-	m1 = m2;
-	m2 = i;
+        /* exchange m1 and m2 */
+        i = m1;
+        m1 = m2;
+        m2 = i;
 
-	/* check for stopping calculation depending on termination method */
-	if (options->termination == TERM_PREC)
-	{
-		if (maxresiduum < options->term_precision)
-		{
-			term_iteration = 0;
-		}
+        /* check for stopping calculation depending on termination method */
+        if (options->termination == TERM_PREC)
+        {
+            if (maxresiduum < options->term_precision)
+            {
+                term_iteration = 0;
+            }
+        }
+        else if (options->termination == TERM_ITER)
+        {
+            term_iteration--;
+        }
 	}
-	else if (options->termination == TERM_ITER)
-	{
-		term_iteration--;
-	}
-	}
-    	free(thread_args);
+    
+    free(thread_args);
    	free(threadArray);
 
 	results->m = m2;

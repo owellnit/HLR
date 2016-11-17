@@ -26,8 +26,9 @@
 #include <math.h>
 #include <malloc.h>
 #include <sys/time.h>
+#include <pthread.h>
 
-#include "partdiff-seq.h"
+#include "partdiff-posix.h"
 
 struct calculation_arguments
 {
@@ -43,6 +44,22 @@ struct calculation_results
 	uint64_t  m;
 	uint64_t  stat_iteration; /* number of current iteration                    */
 	double    stat_precision; /* actual precision of all slaves in iteration    */
+};
+
+//Struct, um mit den einzelnen Threads Daten auszutauschen
+struct calculate_thread_arguments
+{
+    double** inMatrix;  /* Matrix vor Berechnung */
+    double** outMatrix; /* Matrix nach Berechnung */
+    uint64_t inf_func; /* Störfunktion */
+    uint64_t termination; /* Abbruchbedienung */
+    int 	 N; /* number of spaces between lines (lines=N+1)  */
+    int 	 start_i; /* Startreihe */
+    int 	 stop_i; /* Letzte Reihe */
+    int* 	 term_iteration; /* Anzahl der Schleifendurchläufe */
+    double   maxresiduum; /* Höchster Residuum Wert pro Thread */
+    double*	 pih; /* Konstante für Störfunktion */
+    double*	 fpisin; /* Konstante für Störfunktion */
 };
 
 /* ************************************************************************ */
@@ -177,6 +194,66 @@ initMatrices (struct calculation_arguments* arguments, struct options const* opt
 }
 
 /* ************************************************************************ */
+/* calculate: Berechnung für einen Thread                                   */
+/* ************************************************************************ */
+void* doCalculate(void* args)
+{
+    struct calculation_part_arguments * arguments = (struct calculate_thread_arguments*) args;
+    
+    double** Matrix_In = arguments->inMatrix;
+    double** Matrix_Out = arguments->outMatrix;
+    
+    double star;
+    double residuum = 0;
+    double maxresiduum = 0;
+    
+    int const N = arguments->N;
+    int const stop = arguments->stop_i;
+    int const term_iteration = *(arguments->term_iteration);
+    
+    uint64_t const inf_func = arguments->inf_func;
+    uint64_t const termination = arguments->termination;
+    
+    double const pih = *arguments->pih;
+    double const fpisin = *arguments->fpisin;
+    /* over all rows */
+    for (int i = arguments->start_i; i < stop; i++)
+    {
+        double fpisin_i = 0.0;
+        
+        if (inf_func == FUNC_FPISIN)
+        {
+            fpisin_i = fpisin * sin(pih * (double)i);
+        }
+        
+        /* over all columns */
+        for (int j = 1; j < N; j++)
+        {
+            star = 0.25 * (Matrix_In[i-1][j] + Matrix_In[i][j-1] + Matrix_In[i][j+1] + Matrix_In[i+1][j]);
+            
+            if (inf_func == FUNC_FPISIN)
+            {
+                star += fpisin_i * sin(pih * (double)j);
+            }
+            
+            if (termination == TERM_PREC || term_iteration == 1)
+            {
+                residuum = Matrix_In[i][j] - star;
+                residuum = (residuum < 0) ? -residuum : residuum;
+                maxresiduum = (residuum < maxresiduum) ? maxresiduum : residuum;
+            }
+            
+            Matrix_Out[i][j] = star;
+        }
+    }
+    
+    arguments->maxresiduum = maxresiduum;
+    
+    return NULL;
+}
+
+
+/* ************************************************************************ */
 /* calculate: solves the equation                                           */
 /* ************************************************************************ */
 static
@@ -185,12 +262,14 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 {
 	int i, j;                                   /* local variables for loops */
 	int m1, m2;                                 /* used as indices for old and new matrices */
-	double star;                                /* four times center value minus 4 neigh.b values */
-	double residuum;                            /* residuum of current iteration */
 	double maxresiduum;                         /* maximum residuum value of a slave in iteration */
 
 	int const N = arguments->N;
 	double const h = arguments->h;
+    
+    //Thread-Array mit Anzahl der eingegebenne Threads
+    pthread_t threadArray[options->number];
+    calculate_thread_arguments thread_args[options->number]; //malloc(sizeof(calculate_thread_arguments) * options->number);
 
 	double pih = 0.0;
 	double fpisin = 0.0;
@@ -214,47 +293,68 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		pih = PI * h;
 		fpisin = 0.25 * TWO_PI_SQUARE * h * h;
 	}
-
+    
+    //Berechnung wie viele Reihen ein Thread berechnen muss
+    int reihenProThread = (N - 1) / options->number;
+    
+    //Berechnung der Restreihen, die nicht auf die Threads aufgeteilt werden konnten
+    int restReihen = (N - 1) % options->number;
+    
+    //Start- und End-Reihen für die einzelnen Threads
+    int ersteThreadReihe = 0;
+    int letzteThreadReihe = 0;
+    
 	while (term_iteration > 0)
 	{
-		double** Matrix_Out = arguments->Matrix[m1];
-		double** Matrix_In  = arguments->Matrix[m2];
 
-		maxresiduum = 0;
+        //Zuweisung der Parameter für die einzelnen Threads und starten der Threads
+        for(i = 0; i < options->number; i++)
+        {
+            //Berechnung der letzten Reihen, die in einem Thread berechnet werden muss
+            letzteThreadReihe = letzteThreadReihe + reihenProThread;
+            
+            //Aufteilen der Restreihen, bis keine mehr zu Verüfugung stehen
+            if (restReihen > 0)
+            {
+                restReihen -=1;
+                letzteThreadReihe += 1;
+            }
+            
+            //Parameter zuweisen
+            thread_args[i].start_i = ersteThreadReihe;
+            thread_args[i].stop_i = letzteThreadReihe;
+            thread_args[i].inf_func = options->inf_func;
+            thread_args[i].term_iteration = &term_iteration;
+            thread_args[i].termination = options->termination;
+            thread_args[i].N = arguments->N;
+            thread_args[i].pih = &pih;
+            thread_args[i].fpisin = &fpisin;
+            
+            //Berechnung der nächsten Startreihe
+            ersteThreadReihe = letzteThreadReihe + 1;
+        
+            thread_args[i].maxresiduum = 0;
+            thread_args[i].inMatrix = arguments->Matrix[m2];
+            thread_args[i].outMatrix = arguments->Matrix[m1];
+            
+            pthread_create(&threads[i], NULL, &doCalculate, &thread_args[i]);
+        }
+        
+        maxresiduum = 0;
+        results->stat_iteration++;
+        
+        for(i = 0; i < options->number; i++)
+        {
+            if (pthread_join(threadArray[i], NULL))
+            {
+                fprintf(stderr, "%s\n", "pthread_join fehlgeschlagen");
+                return;
+            }
 
-		/* over all rows */
-		for (i = 1; i < N; i++)
-		{
-			double fpisin_i = 0.0;
-
-			if (options->inf_func == FUNC_FPISIN)
-			{
-				fpisin_i = fpisin * sin(pih * (double)i);
-			}
-
-			/* over all columns */
-			for (j = 1; j < N; j++)
-			{
-				star = 0.25 * (Matrix_In[i-1][j] + Matrix_In[i][j-1] + Matrix_In[i][j+1] + Matrix_In[i+1][j]);
-
-				if (options->inf_func == FUNC_FPISIN)
-				{
-					star += fpisin_i * sin(pih * (double)j);
-				}
-
-				if (options->termination == TERM_PREC || term_iteration == 1)
-				{
-					residuum = Matrix_In[i][j] - star;
-					residuum = (residuum < 0) ? -residuum : residuum;
-					maxresiduum = (residuum < maxresiduum) ? maxresiduum : residuum;
-				}
-
-				Matrix_Out[i][j] = star;
-			}
-		}
-
-		results->stat_iteration++;
-		results->stat_precision = maxresiduum;
+            maxresiduum = (args[i].maxresiduum < maxresiduum) ? maxresiduum : args[i].maxresiduum;
+        }
+        
+        results->stat_precision = maxresiduum;
 
 		/* exchange m1 and m2 */
 		i = m1;

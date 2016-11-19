@@ -1,0 +1,10 @@
+Die Bearbeitungszeit bitte in ganzen Stunden angeben (aufrunden).
+In den restlichen Zeilen jeweils ein X in der zutreffenden Spalte setzen.
+
+Bearbeitungszeit: 6 Stunden  
+Schwierigkeit:     [ ] zu leicht         [x] genau richtig     [ ] zu schwer
+Lehrreich:         [ ] wenig             [ ] etwas             [x] sehr
+Verständlichkeit:  [ ] großteils unklar  [ ] teilweise unklar  [x] verständlich
+
+Kommentar:
+Vor allem hat uns die Parameterübergabe an die einzelnen Threads Zeit gekostet. Der Grund hierfür liegt an der Tatsache, dass dabei sehr viel mit Pointern gearbeitet wurde. Da mussten wir uns erst einmal reindenken (vor allem bei den Matrizen). Ansonsten war der Zettel sehr gut mit Hilfe von Tutorials zu bearbeiten. 

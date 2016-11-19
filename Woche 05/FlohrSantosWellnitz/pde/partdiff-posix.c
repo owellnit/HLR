@@ -244,9 +244,10 @@ void *doCalculate(void* args)
 		//Prüfen, ob maxresiduum angepasst werden muss
 		if(residuum > *maxresiduum)
 		{
-            //maxresiduum für anderen Threads sperren
+            		//maxresiduum für anderen Threads sperren
 			pthread_mutex_lock(&lock);
-            //Prüfen, ob Anpassung nach dem Warten immernoch nötig ist
+            		
+			//Prüfen, ob Anpassung nach dem Warten immernoch nötig ist
 			if(residuum > *maxresiduum)
 			{
 				*maxresiduum = residuum;
@@ -254,7 +255,7 @@ void *doCalculate(void* args)
 			pthread_mutex_unlock(&lock);
 		}
 		
-        //Maxresiduum für einzelne Thread-Versionen ermitelln (ohne Mutex)
+        	//Maxresiduum für einzelne Thread-Versionen ermitelln (ohne Mutex)
 		//maxresiduum = (residuum < maxresiduum) ? maxresiduum : residuum;
             }
             
@@ -366,11 +367,11 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
         	{
             		if (pthread_join(threadArray[i], NULL))
             		{
-                		fprint("%s\n", "Join failed!");
+                		printf("%s\n", "Join failed!");
                 		return;
             		}
                 
-                    //Auswerten der maxresiduum aller Threads, um das maxresiduum für alle zu ermitteln (ohne Mutex)
+                    	//Auswerten der maxresiduum aller Threads, um das maxresiduum für alle zu ermitteln (ohne Mutex)
             		//maxresiduum = (thread_args[i].maxresiduum < maxresiduum) ? maxresiduum : thread_args[i].maxresiduum;
         	}
         
@@ -500,7 +501,7 @@ main (int argc, char** argv)
 	struct calculation_arguments arguments;
 	struct calculation_results results;
 
-    //Mutex initialisieren
+    	//Mutex initialisieren
 	pthread_mutex_init (&lock, NULL);
 
 	AskParams(&options, argc, argv);
@@ -517,7 +518,7 @@ main (int argc, char** argv)
 	displayStatistics(&arguments, &results, &options);
 	DisplayMatrix(&arguments, &results, &options);
 
-    //Mutex freigeben
+    	//Mutex freigeben
 	pthread_mutex_destroy(&lock);
 	freeMatrices(&arguments);
 

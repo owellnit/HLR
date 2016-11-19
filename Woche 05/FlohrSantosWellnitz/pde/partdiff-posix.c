@@ -241,19 +241,21 @@ void *doCalculate(void* args)
                 residuum = Matrix_In[i][j] - star;
                 residuum = (residuum < 0) ? -residuum : residuum;
                
-		//pthread_mutex_lock(&lock);
+		//Prüfen, ob maxresiduum angepasst werden muss
 		if(residuum > *maxresiduum)
 		{
+            //maxresiduum für anderen Threads sperren
 			pthread_mutex_lock(&lock);
+            //Prüfen, ob Anpassung nach dem Warten immernoch nötig ist
 			if(residuum > *maxresiduum)
 			{
 				*maxresiduum = residuum;
 			}
 			pthread_mutex_unlock(&lock);
 		}
-		//pthread_mutex_unlock(&lock);
-
-		//*maxresiduum = (residuum < *maxresiduum) ? *maxresiduum : residuum;
+		
+        //Maxresiduum für einzelne Thread-Versionen ermitelln (ohne Mutex)
+		//maxresiduum = (residuum < maxresiduum) ? maxresiduum : residuum;
             }
             
             Matrix_Out[i][j] = star;
@@ -281,8 +283,8 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 	double const h = arguments->h;
     
 	//Thread-Array mit Anzahl der eingegebenne Threads
-    	pthread_t* threadArray = malloc(sizeof(pthread_t) * options->number);
-    	struct calculate_thread_arguments* thread_args =  malloc(sizeof(struct calculate_thread_arguments) * options->number);
+    	pthread_t* threadArray = allocateMemory(sizeof(pthread_t) * options->number);
+    	struct calculate_thread_arguments* thread_args =  allocateMemory(sizeof(struct calculate_thread_arguments) * options->number);
 
 	double pih = 0.0;
 	double fpisin = 0.0;
@@ -326,8 +328,8 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
         	//Aufteilen der Restreihen, bis keine mehr zu Verüfugung stehen
         	if (remainRows > 0)
         	{
-                	remainRows -=1;
-                	lastThreadRow += 1;
+                	remainRows = remainRows - 1;
+                	lastThreadRow = lastThreadRow + 1;
         	}
         
         	//Parameter zuweisen
@@ -359,15 +361,16 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
         	//maxresiduum = 0;
         	results->stat_iteration++;
         
-        	//Alle Threads wieder zusammenführen und gemeinsames maxresiduum ermitteln
+        	//Alle Threads wieder zusammenführen und ggf. ohne Mutex: gemeinsames maxresiduum ermitteln
         	for(i = 0; i < options->number; i++)
         	{
             		if (pthread_join(threadArray[i], NULL))
             		{
-                	//	fprintf("%s\n", "Join failed!");
+                		fprint("%s\n", "Join failed!");
                 		return;
             		}
-
+                
+                    //Auswerten der maxresiduum aller Threads, um das maxresiduum für alle zu ermitteln (ohne Mutex)
             		//maxresiduum = (thread_args[i].maxresiduum < maxresiduum) ? maxresiduum : thread_args[i].maxresiduum;
         	}
         
@@ -497,7 +500,8 @@ main (int argc, char** argv)
 	struct calculation_arguments arguments;
 	struct calculation_results results;
 
-	//pthread_mutex_init (&lock, NULL);
+    //Mutex initialisieren
+	pthread_mutex_init (&lock, NULL);
 
 	AskParams(&options, argc, argv);
 
@@ -513,7 +517,8 @@ main (int argc, char** argv)
 	displayStatistics(&arguments, &results, &options);
 	DisplayMatrix(&arguments, &results, &options);
 
-	//pthread_mutex_destroy(&lock);
+    //Mutex freigeben
+	pthread_mutex_destroy(&lock);
 	freeMatrices(&arguments);
 
 	return 0;

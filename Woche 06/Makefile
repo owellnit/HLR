@@ -7,13 +7,13 @@ LFLAGS = $(CFLAGS)
 LIBS   = -lm
 
 # Targets ...
-all: timempi #timempi2
+all: timempi timempi2
 
 timempi: timempi.c Makefile
 	$(CC) $(LFLAGS) -o $@ timempi.c $(LIBS)
 
-#timempi2: timempi2.c Makefile
-#	$(CC) $(LFLAGS) -o $@ timempi2.c $(LIBS)
+timempi2: timempi2.c Makefile
+	$(CC) $(LFLAGS) -o $@ timempi2.c $(LIBS)
 
 clean:
-	$(RM) *.o *~ timempi# timempi
+	$(RM) *.o *~ timempi2 timempi

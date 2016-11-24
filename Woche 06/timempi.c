@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <mpi.h>
 #include <time.h>
+#include <sys/time.h>
 #include <unistd.h>
 
 const int HOSTNAME_LENGTH = 40;
@@ -30,14 +31,16 @@ int main(int argc, char **argv)
   	char hostname[HOSTNAME_LENGTH];
     	char timestamp[TIMESTAMP_LENGTH];
     	char buffer[BUFFER_SIZE];
-  	struct timespec time;
+  	struct timeval time;
+	time_t nowtime;
 
   	gethostname(hostname, HOSTNAME_LENGTH);
     	gettimeofday(&time, NULL);
     
-    	strftime(timestamp, sizeof(timestamp), "%F %T", localtime(&time.tv_sec));
+	nowtime = time.tv_sec;
+    	strftime(timestamp, sizeof(timestamp), "%F %T", localtime(&nowtime));
       
-    	sprintf(buffer, "%s: %s.%09ld", hostname, timestamp, time.tv_nsec);
+    	sprintf(buffer, "%s: %s.%06ld", hostname, timestamp, time.tv_usec);
     
     	MPI_Send(buffer, BUFFER_SIZE, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
   }

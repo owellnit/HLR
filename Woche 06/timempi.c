@@ -3,9 +3,9 @@
 #include <time.h>
 #include <unistd.h>
 
-const HOSTENAME_LENGTH = 40;
-const TIMESTAMP_LENGTH = 40;
-const BUFFER_SIZE = HOSTENAME_LENGTH + TIMESTAMP_LENGTH;
+const int HOSTNAME_LENGTH = 40;
+const int TIMESTAMP_LENGTH = 40;
+const int BUFFER_SIZE = 80;
 
 int main(int argc, char **argv)
 {
@@ -18,32 +18,32 @@ int main(int argc, char **argv)
 
   if (actualProcess == 0)
   {
-  	char buff[BUFF_SIZE];
+  	char buffer[BUFFER_SIZE];
   	for (int i = 1; i < numberOfProcesses; i++)
   	{
-  		MPI_Recv(buff, BUFF_SIZE, MPI_CHAR, i, 0, MPI_COMM_WORLD, &status);
-  		printf("%s\n", buff); 
+  		MPI_Recv(buffer, BUFFER_SIZE, MPI_CHAR, i, 0, MPI_COMM_WORLD, &status);
+  		printf("%s\n", buffer); 
   	}
   }
   else
   {
-  	char hostname[HOSTENAME_LENGTH];
-    char timestamp[TIMESTAMP_LENGTH];
-    char buffer[BUFFER_SIZE];
-  	struct timeval time;
+  	char hostname[HOSTNAME_LENGTH];
+    	char timestamp[TIMESTAMP_LENGTH];
+    	char buffer[BUFFER_SIZE];
+  	struct timespec time;
 
-  	gethostname(hostname, MAX_HOSTNAME_LEN);
-    gettimeofday(&time, NULL);
+  	gethostname(hostname, HOSTNAME_LENGTH);
+    	gettimeofday(&time, NULL);
     
-    strftime(time, sizeof(time), "%F %T", localtime(&ts.tv_sec));
+    	strftime(timestamp, sizeof(timestamp), "%F %T", localtime(&time.tv_sec));
       
-    sprintf(buff, "%s: %s.%09ld", hostname, time, ts.tv_nsec);
+    	sprintf(buffer, "%s: %s.%09ld", hostname, timestamp, time.tv_nsec);
     
-    MPI_Send(buff, BUFF_SIZE, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
+    	MPI_Send(buffer, BUFFER_SIZE, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
   }
 
   MPI_Barrier(MPI_COMM_WORLD);
 
   printf("Rang %d beendet jetzt!\n", actualProcess);
-  ierr = MPI_Finalize();
+  MPI_Finalize();
 }

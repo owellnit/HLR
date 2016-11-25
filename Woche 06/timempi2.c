@@ -11,18 +11,25 @@ const int BUFFER_SIZE = 80;
 
 int main(int argc, char **argv)
 {
+	//Anzahl der gesamt Prozesse und der aktuelle Prozess
  	int numberOfProcesses, actualProcess;
-	MPI_Status status;
-	int microsecondsForAllThreads = INT_MAX;
-	int microsecondsLocalThread = 0;
+	MPI_Status status; 
+	int microsecondsForAllThreads;		//Wenigste Mikrosekunden über alle Threads
+	int microsecondsLocalThread = INT_MAX;	//Wenigste Mikrosekunden in einem Thread
 
 
+	//MPI initialisieren
   	MPI_Init(&argc, &argv);
+	//Die Nummer des aktuellen Prozesses ermitteln 
   	MPI_Comm_rank(MPI_COMM_WORLD, &actualProcess);
+
+	//Die Anzahl aller Prozesse ermitteln
   	MPI_Comm_size(MPI_COMM_WORLD, &numberOfProcesses);
 
+	//Wenn der aktuelle Prozess die Nummer 0 hat, in den Lesemodus
   	if (actualProcess == 0)
   	{
+		//Nachrichten der anderen Threads der Reihenfolge nach auslesen
   		char buffer[BUFFER_SIZE];
   		for (int i = 1; i < numberOfProcesses; i++)
   		{
@@ -32,34 +39,43 @@ int main(int argc, char **argv)
   	}
   	else
   	{
-	  	char hostname[HOSTNAME_LENGTH];
+	  	char hostname[HOSTNAME_LENGTH]; 	
     		char timestamp[TIMESTAMP_LENGTH];
     		char buffer[BUFFER_SIZE];
   		struct timeval time;
 		time_t nowtime;
 
+		//Hostname und Time ermitteln
   		gethostname(hostname, HOSTNAME_LENGTH);
     		gettimeofday(&time, NULL);
     
+		//Time in String wandeln
 		nowtime = time.tv_sec;
     		strftime(timestamp, sizeof(timestamp), "%F %T", localtime(&nowtime));
       
+		//Ausgabe mit Hostname und Timestamp zusammenbauen
     		sprintf(buffer, "%s: %s.%06ld", hostname, timestamp, time.tv_usec);
     		
+		//Mikrosekunden des Threads ermitteln
 		microsecondsLocalThread = time.tv_usec;    		
 
+		//Daten über MPI senden
     		MPI_Send(buffer, BUFFER_SIZE, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
   	}
 
+	//'Wartepunkt' für die Threads
   	MPI_Barrier(MPI_COMM_WORLD);
   	
+	//Das Minimum aller Threads ermitteln
 	MPI_Reduce(&microsecondsLocalThread, &microsecondsForAllThreads, 1, MPI_INT, MPI_MIN, 0, MPI_COMM_WORLD);
 
+	//Der Prozess soll die Mikrosekunden schreiben
   	if (actualProcess == 0)
   	{
-   		 printf("%d\n", microsecondsForAllThreads);
+   		 printf("Niedrigste Anzahl Millisekunden: %d\n", microsecondsForAllThreads);
   	};
 
+	//Melden, dass der THread fertig ist
   	printf("Rang %d beendet jetzt!\n", actualProcess);
   	MPI_Finalize();
 }

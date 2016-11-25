@@ -1,12 +1,8 @@
-# Common definitions
-CC = mpicc
-
-# Compiler flags, paths and libraries
-CFLAGS = -std=c11 -pedantic -Wall -Wextra -O2 -ggdb
+CC     = mpicc
+CFLAGS = -std=c11 -pedantic -Wall -Wextra -O2 -g -ggdb
 LFLAGS = $(CFLAGS)
 LIBS   = -lm
 
-# Targets ...
 all: timempi timempi2
 
 timempi: timempi.c Makefile

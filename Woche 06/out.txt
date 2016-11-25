@@ -1,0 +1,30 @@
+west1: 2016-11-25 10:12:41.722290
+west1: 2016-11-25 10:12:41.722290
+west1: 2016-11-25 10:12:41.722290
+west1: 2016-11-25 10:12:41.722289
+west2: 2016-11-25 10:12:56.029160
+west2: 2016-11-25 10:12:56.029160
+west2: 2016-11-25 10:12:56.029160
+west2: 2016-11-25 10:12:56.029160
+west2: 2016-11-25 10:12:56.029162
+west3: 2016-11-25 10:12:41.722263
+west3: 2016-11-25 10:12:41.722258
+west3: 2016-11-25 10:12:41.722258
+west3: 2016-11-25 10:12:41.722258
+west3: 2016-11-25 10:12:41.722263
+Rang 1 beendet jetzt!
+Rang 5 beendet jetzt!
+Rang 3 beendet jetzt!
+Rang 7 beendet jetzt!
+Rang 2 beendet jetzt!
+Rang 4 beendet jetzt!
+Rang 13 beendet jetzt!
+Rang 6 beendet jetzt!
+Rang 11 beendet jetzt!
+Rang 9 beendet jetzt!
+Rang 14 beendet jetzt!
+Niedrigste Anzahl Millisekunden: 29160
+Rang 0 beendet jetzt!
+Rang 12 beendet jetzt!
+Rang 8 beendet jetzt!
+Rang 10 beendet jetzt!

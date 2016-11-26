@@ -13,4 +13,4 @@ then
 	export MPICH_NEMESIS_NETMOD=tcp
 fi
 
-mpiexec ./timempi2
+mpiexec ./timempi

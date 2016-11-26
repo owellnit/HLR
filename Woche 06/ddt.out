@@ -1,5 +1,0 @@
-srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
-srun: got SIGCONT
-slurmstepd: *** JOB 114033 ON west10 CANCELLED AT 2016-11-25T11:59:18 ***
-srun: forcing job termination
-slurmstepd: *** STEP 114033.0 ON west10 CANCELLED AT 2016-11-25T11:59:18 ***

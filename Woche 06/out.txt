@@ -1,30 +1,32 @@
-west1: 2016-11-25 10:12:41.722290
-west1: 2016-11-25 10:12:41.722290
-west1: 2016-11-25 10:12:41.722290
-west1: 2016-11-25 10:12:41.722289
-west2: 2016-11-25 10:12:56.029160
-west2: 2016-11-25 10:12:56.029160
-west2: 2016-11-25 10:12:56.029160
-west2: 2016-11-25 10:12:56.029160
-west2: 2016-11-25 10:12:56.029162
-west3: 2016-11-25 10:12:41.722263
-west3: 2016-11-25 10:12:41.722258
-west3: 2016-11-25 10:12:41.722258
-west3: 2016-11-25 10:12:41.722258
-west3: 2016-11-25 10:12:41.722263
+/var/tmp/slurm-llnl/slurmd/job114224/slurm_script: line 8: /etc/profile.d/wr-spack.sh: Permission denied
+usage: spack [-h] [-d] [-D] [-k] [-m] [-p] [-v] [-s] [-V] SUBCOMMAND ...
+spack: error: unrecognized arguments: --dependencies
+west1: 2016-11-25 20:34:22.268494
+west1: 2016-11-25 20:34:22.268496
+west1: 2016-11-25 20:34:22.268482
+west1: 2016-11-25 20:34:22.268494
+west2: 2016-11-25 20:34:37.077977
+west2: 2016-11-25 20:34:37.077946
+west2: 2016-11-25 20:34:37.077944
+west2: 2016-11-25 20:34:37.077977
+west2: 2016-11-25 20:34:37.077977
+west3: 2016-11-25 20:34:22.266197
+west3: 2016-11-25 20:34:22.266179
+west3: 2016-11-25 20:34:22.266197
+west3: 2016-11-25 20:34:22.266197
+west3: 2016-11-25 20:34:22.266184
+Rang 0 beendet jetzt!
 Rang 1 beendet jetzt!
-Rang 5 beendet jetzt!
 Rang 3 beendet jetzt!
-Rang 7 beendet jetzt!
-Rang 2 beendet jetzt!
 Rang 4 beendet jetzt!
+Rang 2 beendet jetzt!
+Rang 11 beendet jetzt!
+Rang 12 beendet jetzt!
+Rang 5 beendet jetzt!
 Rang 13 beendet jetzt!
 Rang 6 beendet jetzt!
-Rang 11 beendet jetzt!
-Rang 9 beendet jetzt!
 Rang 14 beendet jetzt!
-Niedrigste Anzahl Millisekunden: 29160
-Rang 0 beendet jetzt!
-Rang 12 beendet jetzt!
-Rang 8 beendet jetzt!
+Rang 7 beendet jetzt!
 Rang 10 beendet jetzt!
+Rang 8 beendet jetzt!
+Rang 9 beendet jetzt!

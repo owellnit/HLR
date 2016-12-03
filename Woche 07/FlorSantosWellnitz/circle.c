@@ -4,8 +4,6 @@
 #include <ctype.h>
 #include <mpi.h>
 
-
-
 int*
 init (int N)
 {

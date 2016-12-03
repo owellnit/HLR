@@ -97,13 +97,9 @@ main (int argc, char** argv)
     //Printing before ********************************************
     printf("\nBEFORE\n");
     
-    if(rank == 0)
+    for (int i = 0; i < N; i++)
     {
-        printf("\nAFTER\n");
-        for (int i = 0; i < N; i++)
-        {
-            printf ("rank %d: %d\n", rank, buff[i]);
-        }
+        printf ("rank %d: %d\n", rank, buff[i]);
     }
     
     //int first = buff[0];
@@ -142,22 +138,18 @@ main (int argc, char** argv)
         }
     }
     
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Wait(&send_request,&status);
+    MPI_Wait(&recv_request,&status);
+    
     
     //Nach Rotationen *********************************************
+    printf("\nAFTER\n");
     
-    if(rank == 0)
+    for (int j = 0; j < N; j++)
     {
-        printf("\nAFTER\n");
-        for (int j = 0; j < N; j++)
-        {
-            printf ("rank %d: %d\n", rank, recvbuff[j]);
-        }
+        printf ("rank %d: %d\n", rank, recvbuff[j]);
     }
     
-    MPI_Finalize();
-    free(buf);
-    free(recvbuff);
     
     return EXIT_SUCCESS;
 }

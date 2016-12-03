@@ -13,4 +13,4 @@ then
         export MPICH_NEMESIS_NETMOD=tcp
 fi
 
-mpirun -np 4 ./circle 22
+mpirun -np 4 ./circle 4

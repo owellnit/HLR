@@ -140,10 +140,8 @@ main (int argc, char** argv)
         }
     }
     
-    MPI_Wait(&send_request,&status);
-    MPI_Wait(&recv_request,&status);
-    
-    
+    //'Wartepunkt' für die Threads
+    MPI_Barrier(MPI_COMM_WORLD); 
     //Nach Rotationen *********************************************
     printf("\nAFTER\n");
     
@@ -151,7 +149,7 @@ main (int argc, char** argv)
     {
         printf ("rank %d: %d\n", rank, recvbuff[j]);
     }
-    
+   MPI_Finalize();    
     
     return EXIT_SUCCESS;
 }

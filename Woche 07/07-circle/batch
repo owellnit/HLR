@@ -1,5 +1,16 @@
-circle: circle.c Makefile
-	mpicc -std=c99 -ggdb -Wall -Wextra circle.c -o circle
+#!/bin/bash
+# Use "west" partition.
+#SBATCH --partition=west
+# Output in "job.out", time and erros in "job.err"
+#SBATCH --output=job.out
+#SBATCH --error=job.err
 
-clean:
-	rm -f circle
+. /etc/profile.d/wr-spack.sh
+spack load --dependencies mpi
+
+if [ "${SLURM_PARTITION}" != 'abu' ]
+then
+        export MPICH_NEMESIS_NETMOD=tcp
+fi
+
+mpirun -np 4 ./circle 22

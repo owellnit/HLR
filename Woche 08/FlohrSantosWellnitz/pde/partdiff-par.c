@@ -435,7 +435,7 @@ calculate_mpi (struct calculation_arguments const* arguments, struct calculation
     int columns = mpiArgs->matrixColumns;
     uint64_t absoluteRow = mpiArgs->absoluteStartRow;
     
-    int startRow = 0;
+    int startRow;
     int stopRow = mpiArgs->matrixRows - 1;
     
     if (mpiArgs->rank == ROOT_RANK)
@@ -444,14 +444,7 @@ calculate_mpi (struct calculation_arguments const* arguments, struct calculation
     }
     
     //Erste zu berechne Zeile innerhalb der eigenen Matrix berechnen
-    if(mpiArgs->rank == ROOT_RANK)
-    {
-        startRow = 2;
-    }
-    else
-    {
-        startRow = 1;
-    }
+    startRow = 1;
     
     //Letzt zu berechnende Reihe innerhalb der eigenen Matrix ermitteln
     if(mpiArgs->rank == (mpiArgs->num_procs - 1))

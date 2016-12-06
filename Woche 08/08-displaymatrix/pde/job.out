@@ -6,7 +6,6 @@ Program for calculation of partial differential equations.
     Andreas C. Schmidt, TU München.
 ============================================================
 
-Rank 0 rows 1029 N 4104 from: 0 to: 1026
 ============================================================
 Program for calculation of partial differential equations.  
 ============================================================
@@ -34,11 +33,12 @@ Program for calculation of partial differential equations.
 ============================================================
 
 Rank 3 rows 1028 N 4104 from: 3079 to: 4104
-Rank 3 start 1 stop 1026 next 0 prev 2
-Rank 2 start 1 stop 1027 next 3 prev 1
-Rank 1 start 1 stop 1027 next 2 prev 0
+Rank 0 rows 1029 N 4104 from: 0 to: 1026
 Rank 0 start 2 stop 1028 next 1 prev 3
-Berechnungszeit:    141.332064 s 
+Rank 1 start 1 stop 1027 next 2 prev 0
+Rank 2 start 1 stop 1027 next 3 prev 1
+Rank 3 start 1 stop 1026 next 0 prev 2
+Berechnungszeit:    142.056256 s 
 Speicherbedarf:     257.126236 MiB
 Berechnungsmethode: Jacobi
 Interlines:         512

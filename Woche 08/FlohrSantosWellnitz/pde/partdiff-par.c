@@ -30,10 +30,10 @@
 
 #include "partdiff-par.h"
 
-const ROOT_RANK = 0;
+const int ROOT_RANK = 0;
 
-const TAG_PREV_ROW = 1;
-const TAG_NEXT_ROW = 2;
+const int TAG_PREV_ROW = 1;
+const int TAG_NEXT_ROW = 2;
 
 //Parameter für die calculation mit MPI
 struct mpi_calc_arguments
@@ -478,7 +478,7 @@ calculate_mpi (struct calculation_arguments const* arguments, struct calculation
         maxresiduum = 0;
         
         // Zeilen austauschen
-        if (mpiArgs->rank == 0) // mit ROOT
+        if ((mpiArgs->rank % 2) == 0) // mit ROOT
         {
             //Wenn nicht Root-Rank, dann erste Reihe an Vorgänger senden
             if (mpiArgs->rank != ROOT_RANK)
@@ -495,7 +495,7 @@ calculate_mpi (struct calculation_arguments const* arguments, struct calculation
             //Wenn nicht Root-Rank, dann letzte Reihe vom Vorgänger empfangen
             if (mpiArgs->rank != ROOT_RANK)
             {
-                MPI_Recv(Matrix_In[0], mpiArgs->matrixColumns, MPI_DOUBLE,prevTarget, TAG_NEXT_ROW, MPI_COMM_WORLD, &mpiArgs->status);
+               MPI_Recv(Matrix_In[0], mpiArgs->matrixColumns, MPI_DOUBLE,prevTarget, TAG_NEXT_ROW, MPI_COMM_WORLD, &mpiArgs->status);
             }
             
             //Wenn nicht letzter Rank, dann erste Reihe vom Nachfolger empfangen

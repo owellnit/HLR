@@ -6,6 +6,60 @@ Program for calculation of partial differential equations.
     Andreas C. Schmidt, TU München.
 ============================================================
 
+Rank 6 rows 344 N 4104 from: 2053 to: 2394
+============================================================
+Program for calculation of partial differential equations.  
+============================================================
+(c) Dr. Thomas Ludwig, TU München.
+    Thomas A. Zochler, TU München.
+    Andreas C. Schmidt, TU München.
+============================================================
+
+Rank 7 rows 344 N 4104 from: 2395 to: 2736
+============================================================
+Program for calculation of partial differential equations.  
+============================================================
+(c) Dr. Thomas Ludwig, TU München.
+    Thomas A. Zochler, TU München.
+    Andreas C. Schmidt, TU München.
+============================================================
+
+Rank 8 rows 344 N 4104 from: 2737 to: 3078
+============================================================
+Program for calculation of partial differential equations.  
+============================================================
+(c) Dr. Thomas Ludwig, TU München.
+    Thomas A. Zochler, TU München.
+    Andreas C. Schmidt, TU München.
+============================================================
+
+Rank 9 rows 344 N 4104 from: 3079 to: 3420
+============================================================
+Program for calculation of partial differential equations.  
+============================================================
+(c) Dr. Thomas Ludwig, TU München.
+    Thomas A. Zochler, TU München.
+    Andreas C. Schmidt, TU München.
+============================================================
+
+Rank 10 rows 344 N 4104 from: 3421 to: 3762
+============================================================
+Program for calculation of partial differential equations.  
+============================================================
+(c) Dr. Thomas Ludwig, TU München.
+    Thomas A. Zochler, TU München.
+    Andreas C. Schmidt, TU München.
+============================================================
+
+Rank 11 rows 344 N 4104 from: 3763 to: 4104
+============================================================
+Program for calculation of partial differential equations.  
+============================================================
+(c) Dr. Thomas Ludwig, TU München.
+    Thomas A. Zochler, TU München.
+    Andreas C. Schmidt, TU München.
+============================================================
+
 Rank 0 rows 345 N 4104 from: 0 to: 342
 ============================================================
 Program for calculation of partial differential equations.  
@@ -24,24 +78,7 @@ Program for calculation of partial differential equations.
     Andreas C. Schmidt, TU München.
 ============================================================
 
-============================================================
-Program for calculation of partial differential equations.  
-============================================================
-(c) Dr. Thomas Ludwig, TU München.
-    Thomas A. Zochler, TU München.
-    Andreas C. Schmidt, TU München.
-============================================================
-
 Rank 2 rows 344 N 4104 from: 685 to: 1026
-============================================================
-Program for calculation of partial differential equations.  
-============================================================
-(c) Dr. Thomas Ludwig, TU München.
-    Thomas A. Zochler, TU München.
-    Andreas C. Schmidt, TU München.
-============================================================
-
-Rank 10 rows 344 N 4104 from: 3421 to: 3762
 ============================================================
 Program for calculation of partial differential equations.  
 ============================================================
@@ -59,16 +96,7 @@ Program for calculation of partial differential equations.
     Andreas C. Schmidt, TU München.
 ============================================================
 
-============================================================
-Program for calculation of partial differential equations.  
-============================================================
-(c) Dr. Thomas Ludwig, TU München.
-    Thomas A. Zochler, TU München.
-    Andreas C. Schmidt, TU München.
-============================================================
-
 Rank 4 rows 344 N 4104 from: 1369 to: 1710
-Rank 7 rows 344 N 4104 from: 2395 to: 2736
 ============================================================
 Program for calculation of partial differential equations.  
 ============================================================
@@ -78,47 +106,27 @@ Program for calculation of partial differential equations.
 ============================================================
 
 Rank 5 rows 344 N 4104 from: 1711 to: 2052
-============================================================
-Program for calculation of partial differential equations.  
-============================================================
-(c) Dr. Thomas Ludwig, TU München.
-    Thomas A. Zochler, TU München.
-    Andreas C. Schmidt, TU München.
-============================================================
-
-============================================================
-Program for calculation of partial differential equations.  
-============================================================
-(c) Dr. Thomas Ludwig, TU München.
-    Thomas A. Zochler, TU München.
-    Andreas C. Schmidt, TU München.
-============================================================
-
-Rank 9 rows 344 N 4104 from: 3079 to: 3420
-============================================================
-Program for calculation of partial differential equations.  
-============================================================
-(c) Dr. Thomas Ludwig, TU München.
-    Thomas A. Zochler, TU München.
-    Andreas C. Schmidt, TU München.
-============================================================
-
-Rank 11 rows 344 N 4104 from: 3763 to: 4104
-Rank 6 rows 344 N 4104 from: 2053 to: 2394
-Rank 8 rows 344 N 4104 from: 2737 to: 3078
-Rank 10 start 1 stop 343 next 11 prev 9
-Rank 7 start 1 stop 343 next 8 prev 6
-Rank 11 start 1 stop 342 next 0 prev 10
-Rank 8 start 1 stop 343 next 9 prev 7
-Rank 6 start 1 stop 343 next 7 prev 5
-Rank 9 start 1 stop 343 next 10 prev 8
 Rank 0 start 2 stop 344 next 1 prev 11
-Rank 4 start 1 stop 343 next 5 prev 3
-Rank 1 start 1 stop 343 next 2 prev 0
+Rank 7 start 1 stop 343 next 8 prev 6
+Rank 10 start 1 stop 343 next 11 prev 9
+Rank 3 start 1 stop 343 next 4 prev 2
 Rank 2 start 1 stop 343 next 3 prev 1
 Rank 5 start 1 stop 343 next 6 prev 4
-Rank 3 start 1 stop 343 next 4 prev 2
-Berechnungszeit:    47.780368 s 
+Rank 6 start 1 stop 343 next 7 prev 5
+Rank 9 start 1 stop 343 next 10 prev 8
+Rank 1 start 1 stop 343 next 2 prev 0
+Rank 11 start 1 stop 342 next 0 prev 10
+Rank 4 start 1 stop 343 next 5 prev 3
+Rank 8 start 1 stop 343 next 9 prev 7
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   PID 16995 RUNNING AT west3
+=   EXIT CODE: 15
+=   CLEANING UP REMAINING PROCESSES
+=   YOU CAN IGNORE THE BELOW CLEANUP MESSAGES
+===================================================================================
+Berechnungszeit:    47.956910 s 
 Speicherbedarf:     257.126236 MiB
 Berechnungsmethode: Jacobi
 Interlines:         512

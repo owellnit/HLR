@@ -523,6 +523,13 @@ calculate_mpi (struct calculation_arguments const* arguments, struct calculation
         }
         else
         {
+	    MPI_Send(Matrix_In[1], mpiArgs->matrixColumns, MPI_DOUBLE, previousTarget, TAG_PREV_ROW, MPI_COMM_WORLD);  
+
+	    if (mpiArgs->rank != (mpiArgs->num_procs - 1))
+	    {
+	    	MPI_Send(Matrix_In[stopRow -1], mpiArgs->matrixColumns, MPI_DOUBLE, nextTarget, TAG_NEXT_ROW, MPI_COMM_WORLD);
+	    }
+
             //Letzte Reihe vom Vorgänger Empfangen
             MPI_Recv(Matrix_In[0], mpiArgs->matrixColumns, MPI_DOUBLE,previousTarget, TAG_NEXT_ROW, MPI_COMM_WORLD, &mpiArgs->status);
             
@@ -531,16 +538,7 @@ calculate_mpi (struct calculation_arguments const* arguments, struct calculation
             {
                 MPI_Recv(Matrix_In[stopRow], mpiArgs->matrixColumns, MPI_DOUBLE,nextTarget, TAG_PREV_ROW, MPI_COMM_WORLD, &mpiArgs->status);
             }
-            
-            //Erste Reihe an Vorgänger senden
-            MPI_Send(Matrix_In[1], mpiArgs->matrixColumns, MPI_DOUBLE, previousTarget, TAG_PREV_ROW, MPI_COMM_WORLD);
-            
-            //Wenn nicht letzter Rank, letzte Reihe an Nachfolger senden
-            if (mpiArgs->rank != (mpiArgs->num_procs - 1))
-            {
-                MPI_Send(Matrix_In[stopRow - 1], mpiArgs->matrixColumns, MPI_DOUBLE, nextTarget, TAG_NEXT_ROW, MPI_COMM_WORLD);
-            }
-        }
+       }
         
         /* over all rows */
         for (i = startRow; i < stopRow; i++)

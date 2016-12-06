@@ -26,8 +26,14 @@
 #include <math.h>
 #include <malloc.h>
 #include <sys/time.h>
+#include <mpi.h>
 
 #include "partdiff-par.h"
+
+#define ROOT 0
+
+#define TAG_SEND_UPPER_ROW 1
+#define TAG_SEND_LOWER_ROW 2
 
 //Parameter für die calculation mit MPI
 struct mpi_calc_arguments
@@ -188,9 +194,9 @@ allocateMatrices_mpi (struct calculation_arguments* arguments, struct mpi_calc_a
     //Startreihe ermitteln
     int actual_splitted_remain_rows = 0;
     //Wenn Rank keine Extra-Reihe bekommen hat, dann müssen alle Extra-Reihen hinzuaddiert werden
-    if (mpiArgs->rank > extra)
+    if (mpiArgs->rank > remainRows)
     {
-        actual_splitted_remain_rows = extra;
+        actual_splitted_remain_rows = remainRows;
     }
     //Sonst müssen die bisherigen Extra-Reihen addiert werden, die bisher aufgeteilt wurden
     else
@@ -671,7 +677,7 @@ DisplayMatrix (struct calculation_arguments* arguments, struct calculation_resul
  */
 static
 void
-DisplayMatrix (struct calculation_arguments* arguments, struct calculation_results* results, struct options* options, int rank, int size, int from, int to)
+DisplayMatrix_mpi (struct calculation_arguments* arguments, struct calculation_results* results, struct options* options, int rank, int size, int from, int to)
 {
     int const elements = 8 * options->interlines + 9;
     
@@ -753,8 +759,8 @@ main (int argc, char** argv)
     struct mpi_calc_arguments mpiArgs;
     
     MPI_Init(&argc, &argv);
-    MPI_Comm_rank(MPI_COMM_WORLD, &comm.rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &comm.num_procs);
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpiArgs.rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &mpiArgs.num_procs);
 
 	AskParams(&options, argc, argv);
 

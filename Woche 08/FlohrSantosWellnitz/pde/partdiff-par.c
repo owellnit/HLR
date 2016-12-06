@@ -438,12 +438,32 @@ calculate_mpi (struct calculation_arguments const* arguments, struct calculation
         absoluteRow = 1;
     }
     
-    const int columns = mpiArgs->matrixColumns;
-    const int startRow = (mpiArgs->rank == ROOT_RANK)? 2 : 1;
-    const int stopRow = (mpiArgs->rank == (mpiArgs->num_procs -1))? mpiArgs->matrixRows -2 : mpiArgs->matrixRows -1;
+    int columns = mpiArgs->matrixColumns;
     
-    const int nextTarget = (mpiArgs->rank + 1) % mpiArgs->num_procs;
-    const int prevTarget = ((mpiArgs->rank - 1) >= 0)? mpiArgs->rank -1 : mpiArgs->num_procs -1;
+    int startRow = 0;
+    
+    if(mpiArgs->rank == ROOT_RANK)
+    {
+        startRow = 2;
+    }
+    else
+    {
+        startRow = 1;
+    }
+    
+    int stopRow = mpiArgs->matrixRows - 1;
+    
+    if(mpiArgs->rank == (mpiArgs->num_procs - 1))
+    {
+        stopRow  -= 2;
+    }
+    else
+    {
+        stopRow -= 1;
+    }
+    
+    int nextTarget = mpiArgs->rank + 1;
+    int prevTarget = mpiArgs->rank - 1;
     
     printf("Rank %d start %d stop %d next %d prev %d\n", mpiArgs->rank, startRow, stopRow, nextTarget, prevTarget);
     

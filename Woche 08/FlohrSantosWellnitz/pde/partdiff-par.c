@@ -165,8 +165,16 @@ allocateMatrices_mpi (struct calculation_arguments* arguments, struct mpi_calc_a
     //Anzahl restlicher Reihen
     int64_t remainRows = (arguments->N + 1) % mpiArgs->num_procs;
     
+    //Ein addieren, wenn erster oder letzter rank
+    if (mpiArgs->rank == ROOT_RANK || mpiArgs->rank == (mpiArgs->num_procs - 1))
+    {
+        mpiArgs->matrixRows  = rowsPerProcess + 1;
+    }
     //Zwei addieren, wegen letzte Reihe Vorgänger und erste Reihe Nachfolger
-    mpiArgs->matrixRows  = rowsPerProcess + 2;
+    else
+    {
+        mpiArgs->matrixRows  = rowsPerProcess + 2;
+    }
     
     mpiArgs->matrixColumns = arguments->N + 1;
     
@@ -213,8 +221,6 @@ allocateMatrices_mpi (struct calculation_arguments* arguments, struct mpi_calc_a
         //Startreihe des Prozesses in der Gesamt-Matrix berechnen
         mpiArgs->absoluteStartRow = (rowsPerProcess * mpiArgs->rank) + actual_splitted_remain_rows;
     }
-    
-    printf("Rank %d rows %lu N %lu from: %lu to: %lu\n", mpiArgs->rank, mpiArgs->matrixRows, arguments->N, mpiArgs->absoluteStartRow, mpiArgs->absoluteStartRow + mpiArgs->matrixRows - 3);
 }
 
 /* ************************************************************************ */
@@ -274,12 +280,13 @@ initMatrices_mpi (struct calculation_arguments* arguments, struct options const*
     const uint64_t columns = mpiArgs->matrixColumns;
     
     double const h = arguments->h;
+    uint64_t const N = arguments->N;
     double*** Matrix = arguments->Matrix;
     
     /* initialize matrix/matrices with zeros */
     for (g = 0; g < arguments->num_matrices; g++)
     {
-        for (i = 1; i < (rows - 1); i++)
+        for (i = 1; i < rows; i++)
         {
             for (j = 0; j < columns; j++)
             {
@@ -296,10 +303,10 @@ initMatrices_mpi (struct calculation_arguments* arguments, struct options const*
         for (g = 0; g < arguments->num_matrices; g++)
         {
             // linke und rechte Ränder
-            for (uint64_t i = 1; i < (rows - 1); i++)
+            for (uint64_t i = 0; i < rows; i++)
             {
-                Matrix[g][i][0] = 1.0 - (h * (absoluteStartRow + i -1));
-                Matrix[g][i][columns-1] = h * (absoluteStartRow + i -1);
+                Matrix[g][i][0] = 1.0 - (h * (absoluteStartRow + i - 1));
+                Matrix[g][i][N] = h * (absoluteStartRow + i - 1);
             }
             
             if (mpiArgs->rank == ROOT_RANK)
@@ -307,18 +314,18 @@ initMatrices_mpi (struct calculation_arguments* arguments, struct options const*
                 // obere Kante initialisieren
                 for (uint64_t i = 0; i < columns; i++)
                 {
-                    Matrix[g][1][i] = 1.0 - (h * i);
+                    Matrix[g][0][i] = 1.0 - (h * i);
                 }
-                Matrix[g][1][columns - 1] = 0;
+                Matrix[g][0][N] = 0;
             }
             if (mpiArgs->rank == (mpiArgs->num_procs - 1))
             {
                 // untere Kante initialisieren
                 for (uint64_t i = 0; i < columns; i++)
                 {
-                    Matrix[g][rows - 2][i] = h * i;
+                    Matrix[g][rows][i] = h * i;
                 }
-                Matrix[g][rows - 2][0] = 0;
+                Matrix[g][N][0] = 0;
             }
         }
     }
@@ -442,30 +449,28 @@ calculate_mpi (struct calculation_arguments const* arguments, struct calculation
     int columns = mpiArgs->matrixColumns;
     uint64_t absoluteRow = mpiArgs->absoluteStartRow;
     
-    int startRow = 0;
-    int stopRow = mpiArgs->matrixRows - 1;
+    int startRow = 1;
+    int stopRow = mpiArgs->matrixRows - 1;;
     
-    //Erste zu berechne Zeile innerhalb der eigenen Matrix berechnen
-    //Die allererste Reihe muss nicht berechnet werden
-    if (mpiArgs->rank == ROOT_RANK)
-    {
-        startRow = 2;
-    }
-    else
-    {
-        startRow = 1;
-    }
+//    //Erste zu berechne Zeile innerhalb der eigenen Matrix berechnen
+//    //Die allererste Reihe muss nicht berechnet werden
+//    if (mpiArgs->rank == ROOT_RANK)
+//    {
+//        startRow = 1;
+//        stopRow = mpiArgs->matrixRows - 1;
+//    }
+//    else
+//    {
+//        startRow = 1;
+//        stopRow = mpiArgs->matrixRows - 1;
+//    }
     
     //Letzte zu berechnende Reihe innerhalb der eigenen Matrix ermitteln
     //Die allerletzte Zeile wird nicht mehr berechnet
-    if(mpiArgs->rank == (mpiArgs->num_procs - 1))
-    {
-        stopRow -= 2;
-    }
-    else
-    {
-        stopRow -= 1;
-    }
+//    if(mpiArgs->rank == (mpiArgs->num_procs - 1))
+//    {
+//        stopRow -= 2;
+//    }
     
     //Die Angaben sind bei ROOT-Rank und beim Letzten Rank zwar nicht korrekt, jedoch wird an diese im Folgenden
     //nie gesendet, somit sind diese zu vernachlässigen
@@ -793,7 +798,7 @@ main (int argc, char** argv)
         initMatrices_mpi(&arguments, &options, &mpiArgs);
         
         gettimeofday(&start_time, NULL);
-        calculate_mpi(&arguments, &results, &options, &mpiArgs);
+        //calculate_mpi(&arguments, &results, &options, &mpiArgs);
         gettimeofday(&comp_time, NULL);
         
         if (mpiArgs.rank == ROOT_RANK)

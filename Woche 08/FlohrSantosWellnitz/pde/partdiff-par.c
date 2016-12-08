@@ -798,7 +798,7 @@ main (int argc, char** argv)
         initMatrices_mpi(&arguments, &options, &mpiArgs);
         
         gettimeofday(&start_time, NULL);
-        //calculate_mpi(&arguments, &results, &options, &mpiArgs);
+        calculate_mpi(&arguments, &results, &options, &mpiArgs);
         gettimeofday(&comp_time, NULL);
         
         if (mpiArgs.rank == ROOT_RANK)

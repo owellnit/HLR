@@ -198,14 +198,21 @@ allocateMatrices_mpi (struct calculation_arguments* arguments, struct mpi_calc_a
     {
         actual_splitted_remain_rows = remainRows;
     }
-    //Sonst müssen die bisherigen Extra-Reihen addiert werden, die bisher aufgeteilt wurden
+    //Sonst müssen die bisherigen Extra-Reihen aufaddiert werden, die bisher aufgeteilt wurden (=Wert aktueller Rank)
     else
     {
         actual_splitted_remain_rows = mpiArgs->rank;
     }
     
-    //Startreihe des Prozesses in der Gesamt-Matrix berechnen
-    mpiArgs->absoluteStartRow = (rowsPerProcess * mpiArgs->rank) + actual_splitted_remain_rows;
+    if(mpiArgs->rank == ROOT_RANK)
+    {
+        mpiArgs->absoluteStartRow = 1;
+    }
+    else
+    {
+        //Startreihe des Prozesses in der Gesamt-Matrix berechnen
+        mpiArgs->absoluteStartRow = (rowsPerProcess * mpiArgs->rank) + actual_splitted_remain_rows;
+    }
     
     printf("Rank %d rows %lu N %lu from: %lu to: %lu\n", mpiArgs->rank, mpiArgs->matrixRows, arguments->N, mpiArgs->absoluteStartRow, mpiArgs->absoluteStartRow + mpiArgs->matrixRows - 3);
 }
@@ -438,12 +445,8 @@ calculate_mpi (struct calculation_arguments const* arguments, struct calculation
     int startRow = 0;
     int stopRow = mpiArgs->matrixRows - 1;
     
-    if (mpiArgs->rank == ROOT_RANK)
-    {
-        absoluteRow = 1;
-    }
-    
     //Erste zu berechne Zeile innerhalb der eigenen Matrix berechnen
+    //Die allererste Reihe muss nicht berechnet werden
     if (mpiArgs->rank == ROOT_RANK)
     {
         startRow = 2;
@@ -454,6 +457,7 @@ calculate_mpi (struct calculation_arguments const* arguments, struct calculation
     }
     
     //Letzte zu berechnende Reihe innerhalb der eigenen Matrix ermitteln
+    //Die allerletzte Zeile wird nicht mehr berechnet
     if(mpiArgs->rank == (mpiArgs->num_procs - 1))
     {
         stopRow -= 2;
@@ -501,35 +505,33 @@ calculate_mpi (struct calculation_arguments const* arguments, struct calculation
         
         maxresiduum = 0;
         
-        // Zeilen austauschen
-        if (mpiArgs->rank == ROOT_RANK)
+        /***   Senden und Empfangen der Zeilen   ***/
+        
+        //Wenn nicht Root-Rank, dann erste Reihe an Vorgänger senden
+        if (mpiArgs->rank != ROOT_RANK)
         {
-            //Letzte Zeile an Nachfolger senden
-            MPI_Send(Matrix_In[stopRow - 1], mpiArgs->matrixColumns, MPI_DOUBLE, nextTarget, TAG_NEXT_ROW, MPI_COMM_WORLD);
-            
-            //Erste Zeile des Vorgängers Empfangen
-            MPI_Recv(Matrix_In[stopRow], mpiArgs->matrixColumns, MPI_DOUBLE, nextTarget, TAG_PREV_ROW, MPI_COMM_WORLD, &mpiArgs->status);
-        }
-        else
-        {
-            //Erste Reihe an Vorgänger senden
             MPI_Send(Matrix_In[1], mpiArgs->matrixColumns, MPI_DOUBLE, previousTarget, TAG_PREV_ROW, MPI_COMM_WORLD);
+        }
 
-            //Wenn nicht letzter Rank, dann letzte Reihe an Nachfolger senden
-            if (mpiArgs->rank != (mpiArgs->num_procs - 1))
-            {
-                MPI_Send(Matrix_In[stopRow - 1], mpiArgs->matrixColumns, MPI_DOUBLE, nextTarget, TAG_NEXT_ROW, MPI_COMM_WORLD);
-            }
+        //Wenn nicht letzter Rank, dann letzte Reihe an Nachfolger senden
+        if (mpiArgs->rank != (mpiArgs->num_procs - 1))
+        {
+            MPI_Send(Matrix_In[stopRow - 1], mpiArgs->matrixColumns, MPI_DOUBLE, nextTarget, TAG_NEXT_ROW, MPI_COMM_WORLD);
+        }
 
-            //Letzte Reihe vom Vorgänger Empfangen
+        //Wenn nicht Root-Rank, dann letzte Reihe vom Vorgänger Empfangen
+        if (mpiArgs->rank != ROOT_RANK)
+        {
             MPI_Recv(Matrix_In[0], mpiArgs->matrixColumns, MPI_DOUBLE,previousTarget, TAG_NEXT_ROW, MPI_COMM_WORLD, &mpiArgs->status);
+        }
             
-            //Wenn nicht letzter Rank, erst Reihe vom Nachfolger empfangen
-            if (mpiArgs->rank != (mpiArgs->num_procs - 1))
-            {
-                MPI_Recv(Matrix_In[stopRow], mpiArgs->matrixColumns, MPI_DOUBLE,nextTarget, TAG_PREV_ROW, MPI_COMM_WORLD, &mpiArgs->status);
-            }
-       }
+        //Wenn nicht letzter Rank, erst Reihe vom Nachfolger empfangen
+        if (mpiArgs->rank != (mpiArgs->num_procs - 1))
+        {
+            MPI_Recv(Matrix_In[stopRow], mpiArgs->matrixColumns, MPI_DOUBLE,nextTarget, TAG_PREV_ROW, MPI_COMM_WORLD, &mpiArgs->status);
+        }
+        
+        /***   Senden und Empfangen der Zeilen   ***/
         
         /* over all rows */
         for (i = startRow; i < stopRow; i++)

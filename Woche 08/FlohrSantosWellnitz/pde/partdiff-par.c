@@ -40,7 +40,7 @@ struct mpi_calc_arguments
 {
     int rank;                       /*Aktueller rank*/
     int numberOfProcesses;          /*Anzahl der Gesamtprozesse*/
-    MPI_Status Status;              /*Der MPI-Status*/
+    MPI_Status status;              /*Der MPI-Status*/
     
     uint64_t startRowInTotalMatrix; /*Die Startreihe in der Gesamt-Matrix*/
     uint64_t matrixRows;            /*Anzahl der Teilmatrix-Reihen*/
@@ -774,7 +774,7 @@ main (int argc, char** argv)
     MPI_Comm_size(MPI_COMM_WORLD, &mpiArgs.numberOfProcesses);
 
     //AskParams um einen Parameter erweitert, damit nur der Root-Rank die Info am Anfang anzeigt
-	AskParams(&options, argc, argv, mpiArgs->rank);
+	AskParams(&options, argc, argv, mpiArgs.rank);
 
 	initVariables(&arguments, &results, &options);
 

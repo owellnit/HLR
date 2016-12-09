@@ -32,19 +32,19 @@
 
 const int ROOT_RANK = 0;
 
-const int TAG_PREV_ROW = 1;
+const int TAG_PREVIOUS_ROW = 1;
 const int TAG_NEXT_ROW = 2;
 
 //Parameter für die calculation mit MPI
 struct mpi_calc_arguments
 {
-    int rank;                   /*Aktueller rank*/
-    int num_procs;              /*Anzahl der Gesamtprozesse*/
-    MPI_Status status;          /*Der MPI-Status*/
+    int rank;                       /*Aktueller rank*/
+    int numberOfProcesses;          /*Anzahl der Gesamtprozesse*/
+    MPI_Status Status;              /*Der MPI-Status*/
     
-    uint64_t absoluteStartRow;  /*Die Startreihe in der Gesamt-Matrix*/
-    uint64_t matrixRows;        /*Anzahl der Teilmatrix-Reihen*/
-    uint64_t matrixColumns;     /*Anzahl der Teilmatrix-Spalten*/
+    uint64_t startRowInTotalMatrix; /*Die Startreihe in der Gesamt-Matrix*/
+    uint64_t matrixRows;            /*Anzahl der Teilmatrix-Reihen*/
+    uint64_t matrixColumns;         /*Anzahl der Teilmatrix-Spalten*/
 };
 
 struct calculation_arguments
@@ -160,13 +160,14 @@ allocateMatrices_mpi (struct calculation_arguments* arguments, struct mpi_calc_a
     uint64_t i, j;
     
     //Reihen für Prozess ermitteln
-    uint64_t rowsPerProcess = (arguments->N + 1) / mpiArgs->num_procs;
+    uint64_t rowsPerProcess = (arguments->N + 1) / mpiArgs->numberOfProcesses;
     
     //Anzahl restlicher Reihen
-    int64_t remainRows = (arguments->N + 1) % mpiArgs->num_procs;
+    int64_t remainRows = (arguments->N + 1) % mpiArgs->numberOfProcesses;
     
-    //Ein addieren, wenn erster oder letzter rank
-    if (mpiArgs->rank == ROOT_RANK || mpiArgs->rank == (mpiArgs->num_procs - 1))
+    //Nur eine Reihe addieren, wenn erster oder letzter rank
+    //Es wird nur Vor- oder Nachfolger benötigt
+    if (mpiArgs->rank == ROOT_RANK || mpiArgs->rank == (mpiArgs->numberOfProcesses - 1))
     {
         mpiArgs->matrixRows  = rowsPerProcess + 1;
     }
@@ -176,6 +177,7 @@ allocateMatrices_mpi (struct calculation_arguments* arguments, struct mpi_calc_a
         mpiArgs->matrixRows  = rowsPerProcess + 2;
     }
     
+    //Anzahl Columns ermitteln
     mpiArgs->matrixColumns = arguments->N + 1;
     
     //Restliche Reihen aufteilen, wenn Prozessnummer kleiner Anzahl restlichen Reihen
@@ -199,9 +201,9 @@ allocateMatrices_mpi (struct calculation_arguments* arguments, struct mpi_calc_a
         }
     }
     
-    //Startreihe ermitteln
     int actual_splitted_remain_rows = 0;
-    //Wenn Rank keine Extra-Reihe bekommen hat, dann müssen alle Extra-Reihen hinzuaddiert werden
+    
+    //Wenn Rank keine Extra-Reihe bekommen hat, dann müssen alle übergebliebenen Reihen hinzuaddiert werden
     if (mpiArgs->rank > remainRows)
     {
         actual_splitted_remain_rows = remainRows;
@@ -212,14 +214,15 @@ allocateMatrices_mpi (struct calculation_arguments* arguments, struct mpi_calc_a
         actual_splitted_remain_rows = mpiArgs->rank;
     }
     
+    //Root-Rank startet bei 1, weil die erste Reihe der Matrix nicht berechnet wird
     if(mpiArgs->rank == ROOT_RANK)
     {
-        mpiArgs->absoluteStartRow = 1;
+        mpiArgs->startRowInTotalMatrix = 1;
     }
     else
     {
         //Startreihe des Prozesses in der Gesamt-Matrix berechnen
-        mpiArgs->absoluteStartRow = (rowsPerProcess * mpiArgs->rank) + actual_splitted_remain_rows;
+        mpiArgs->startRowInTotalMatrix = (rowsPerProcess * mpiArgs->rank) + actual_splitted_remain_rows;
     }
 }
 
@@ -298,29 +301,29 @@ initMatrices_mpi (struct calculation_arguments* arguments, struct options const*
     /* initialize borders, depending on function (function 2: nothing to do) */
     if (options->inf_func == FUNC_F0)
     {
-        const uint64_t absoluteStartRow = mpiArgs->absoluteStartRow; // die erste Zeile wird überprungen
+        const uint64_t startRowInTotalMatrix = mpiArgs->startRowInTotalMatrix; // die erste Zeile wird überprungen
         
         for (g = 0; g < arguments->num_matrices; g++)
         {
-            // linke und rechte Ränder
+            //Initialisieren der Ränder
             for (uint64_t i = 0; i < rows; i++)
             {
-                Matrix[g][i][0] = 1.0 - (h * (absoluteStartRow + i - 1));
-                Matrix[g][i][N] = h * (absoluteStartRow + i - 1);
+                Matrix[g][i][0] = 1.0 - (h * (startRowInTotalMatrix + i - 1));
+                Matrix[g][i][N] = h * (startRowInTotalMatrix + i - 1);
             }
             
             if (mpiArgs->rank == ROOT_RANK)
             {
-                // obere Kante initialisieren
+                //Initialisieren der ersten Reihe
                 for (uint64_t i = 0; i < columns; i++)
                 {
                     Matrix[g][0][i] = 1.0 - (h * i);
                 }
                 Matrix[g][0][N] = 0;
             }
-            if (mpiArgs->rank == (mpiArgs->num_procs - 1))
+            else if (mpiArgs->rank == (mpiArgs->numberOfProcesses - 1))
             {
-                // untere Kante initialisieren
+                //Initialisieren der letzten Reihe
                 for (uint64_t i = 0; i < columns; i++)
                 {
                     Matrix[g][rows][i] = h * i;
@@ -447,13 +450,19 @@ calculate_mpi (struct calculation_arguments const* arguments, struct calculation
     double maxresiduum;                         /* maximum residuum value of a slave in iteration */
     double const h = arguments->h;
     int columns = mpiArgs->matrixColumns;
-    uint64_t absoluteRow = mpiArgs->absoluteStartRow;
+    uint64_t startRowInTotalMatrix = mpiArgs->startRowInTotalMatrix;
     
+    //Die Startreihe ist immer 1, denn der Root-Rank soll die erste Matrixzeile nicht berechnen
+    //und die anderen Prozesse haben in der ersten Reihe die letzte Reihe des Vorgängers gespeichert
     int startRow = 1;
+    
+    //Die Stopreihe ist immer die vorletzte, denn der  letzte Rank soll die letzte Matrixzeile nicht berechnen
+    //und die anderen Prozesse haben in der letzten Reihe die erste Reihe des Nachfolgers gespeichert
     int stopRow = mpiArgs->matrixRows - 1;;
     
-    //Die Angaben sind bei ROOT-Rank und beim Letzten Rank zwar nicht korrekt, jedoch wird an diese im Folgenden
-    //nie gesendet, somit sind diese zu vernachlässigen
+    //Die Berechnung stimmen bei dem Root-Rank bzw letzten Rank nicht, weil der Root-Rank keinen Vorgänger und
+    //der letzte keinen Nachfolger hat. Im Folgenden wird ein Senden bzw. Empfangen bei diesen Fällen jedoch verhindert,
+    //sodass kein Fehler da durch aufritt.
     int nextTarget = mpiArgs->rank + 1;
     int previousTarget = mpiArgs->rank - 1;
     
@@ -492,11 +501,11 @@ calculate_mpi (struct calculation_arguments const* arguments, struct calculation
         //Wenn nicht Root-Rank, dann erste Reihe an Vorgänger senden
         if (mpiArgs->rank != ROOT_RANK)
         {
-            MPI_Send(Matrix_In[1], mpiArgs->matrixColumns, MPI_DOUBLE, previousTarget, TAG_PREV_ROW, MPI_COMM_WORLD);
+            MPI_Send(Matrix_In[1], mpiArgs->matrixColumns, MPI_DOUBLE, previousTarget, TAG_PREVIOUS_ROW, MPI_COMM_WORLD);
         }
 
         //Wenn nicht letzter Rank, dann letzte Reihe an Nachfolger senden
-        if (mpiArgs->rank != (mpiArgs->num_procs - 1))
+        if (mpiArgs->rank != (mpiArgs->numberOfProcesses - 1))
         {
             MPI_Send(Matrix_In[stopRow - 1], mpiArgs->matrixColumns, MPI_DOUBLE, nextTarget, TAG_NEXT_ROW, MPI_COMM_WORLD);
         }
@@ -508,12 +517,11 @@ calculate_mpi (struct calculation_arguments const* arguments, struct calculation
         }
             
         //Wenn nicht letzter Rank, erst Reihe vom Nachfolger empfangen
-        if (mpiArgs->rank != (mpiArgs->num_procs - 1))
+        if (mpiArgs->rank != (mpiArgs->numberOfProcesses - 1))
         {
-            MPI_Recv(Matrix_In[stopRow], mpiArgs->matrixColumns, MPI_DOUBLE,nextTarget, TAG_PREV_ROW, MPI_COMM_WORLD, &mpiArgs->status);
+            MPI_Recv(Matrix_In[stopRow], mpiArgs->matrixColumns, MPI_DOUBLE,nextTarget, TAG_PREVIOUS_ROW, MPI_COMM_WORLD, &mpiArgs->status);
         }
         
-        /***   Senden und Empfangen der Zeilen   ***/
         
         /* over all rows */
         for (i = startRow; i < stopRow; i++)
@@ -522,7 +530,7 @@ calculate_mpi (struct calculation_arguments const* arguments, struct calculation
             
             if (options->inf_func == FUNC_FPISIN)
             {
-                fpisin_i = fpisin * sin(pih * (double)(absoluteRow + i - startRow));
+                fpisin_i = fpisin * sin(pih * (double)(startRowInTotalMatrix + i - startRow));
             }
             
             /* over all columns */
@@ -548,6 +556,7 @@ calculate_mpi (struct calculation_arguments const* arguments, struct calculation
         
         results->stat_iteration++;
         
+        //Das MaxReisduum aller Prozesse ermitteln
         double maxresiduumOverAllProcesses;
         MPI_Allreduce(&maxresiduum, &maxresiduumOverAllProcesses, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
         
@@ -762,14 +771,15 @@ main (int argc, char** argv)
     
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpiArgs.rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &mpiArgs.num_procs);
+    MPI_Comm_size(MPI_COMM_WORLD, &mpiArgs.numberOfProcesses);
 
+    //AskParams um einen Parameter erweitert, damit nur der Root-Rank die Info am Anfang anzeigt
 	AskParams(&options, argc, argv, mpiArgs->rank);
 
 	initVariables(&arguments, &results, &options);
 
     //Nur wenn Jacobi und mehr als 1 Prozess
-    if (options.method == METH_JACOBI && mpiArgs.num_procs > 1)
+    if (options.method == METH_JACOBI && mpiArgs.numberOfProcesses > 1)
     {
         allocateMatrices_mpi(&arguments, &mpiArgs);
         initMatrices_mpi(&arguments, &options, &mpiArgs);
@@ -778,13 +788,13 @@ main (int argc, char** argv)
         calculate_mpi(&arguments, &results, &options, &mpiArgs);
         gettimeofday(&comp_time, NULL);
         
-        //Nor Root-Rank soll das ergebnis anzeigen
+        //Nur Root-Rank soll das ergebnis anzeigen
         if (mpiArgs.rank == ROOT_RANK)
         {
             displayStatistics(&arguments, &results, &options);
         }
         
-        DisplayMatrix_mpi(&arguments, &results, &options, mpiArgs.rank, mpiArgs.num_procs, mpiArgs.absoluteStartRow, mpiArgs.absoluteStartRow + mpiArgs.matrixRows -3);
+        DisplayMatrix_mpi(&arguments, &results, &options, mpiArgs.rank, mpiArgs.numberOfProcesses, mpiArgs.startRowInTotalMatrix, mpiArgs.startRowInTotalMatrix + mpiArgs.matrixRows -3);
     }
     else
     {

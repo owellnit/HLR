@@ -452,33 +452,10 @@ calculate_mpi (struct calculation_arguments const* arguments, struct calculation
     int startRow = 1;
     int stopRow = mpiArgs->matrixRows - 1;;
     
-//    //Erste zu berechne Zeile innerhalb der eigenen Matrix berechnen
-//    //Die allererste Reihe muss nicht berechnet werden
-//    if (mpiArgs->rank == ROOT_RANK)
-//    {
-//        startRow = 1;
-//        stopRow = mpiArgs->matrixRows - 1;
-//    }
-//    else
-//    {
-//        startRow = 1;
-//        stopRow = mpiArgs->matrixRows - 1;
-//    }
-    
-    //Letzte zu berechnende Reihe innerhalb der eigenen Matrix ermitteln
-    //Die allerletzte Zeile wird nicht mehr berechnet
-//    if(mpiArgs->rank == (mpiArgs->num_procs - 1))
-//    {
-//        stopRow -= 2;
-//    }
-    
     //Die Angaben sind bei ROOT-Rank und beim Letzten Rank zwar nicht korrekt, jedoch wird an diese im Folgenden
     //nie gesendet, somit sind diese zu vernachlässigen
     int nextTarget = mpiArgs->rank + 1;
     int previousTarget = mpiArgs->rank - 1;
-    
-    
-    printf("Rank %d start %d stop %d next %d prev %d\n", mpiArgs->rank, startRow, stopRow, nextTarget, previousTarget);
     
     double pih = 0.0;
     double fpisin = 0.0;
@@ -571,10 +548,10 @@ calculate_mpi (struct calculation_arguments const* arguments, struct calculation
         
         results->stat_iteration++;
         
-        double all_maxresiduum;
-        MPI_Allreduce(&maxresiduum, &all_maxresiduum, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+        double maxresiduumOverAllProcesses;
+        MPI_Allreduce(&maxresiduum, &maxresiduumOverAllProcesses, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
         
-        maxresiduum = all_maxresiduum;
+        maxresiduum = maxresiduumOverAllProcesses;
         results->stat_precision = maxresiduum;
         
         /* exchange m1 and m2 */
@@ -787,11 +764,11 @@ main (int argc, char** argv)
     MPI_Comm_rank(MPI_COMM_WORLD, &mpiArgs.rank);
     MPI_Comm_size(MPI_COMM_WORLD, &mpiArgs.num_procs);
 
-	AskParams(&options, argc, argv);
+	AskParams(&options, argc, argv, mpiArgs->rank);
 
 	initVariables(&arguments, &results, &options);
 
-    
+    //Nur wenn Jacobi und mehr als 1 Prozess
     if (options.method == METH_JACOBI && mpiArgs.num_procs > 1)
     {
         allocateMatrices_mpi(&arguments, &mpiArgs);
@@ -801,6 +778,7 @@ main (int argc, char** argv)
         calculate_mpi(&arguments, &results, &options, &mpiArgs);
         gettimeofday(&comp_time, NULL);
         
+        //Nor Root-Rank soll das ergebnis anzeigen
         if (mpiArgs.rank == ROOT_RANK)
         {
             displayStatistics(&arguments, &results, &options);

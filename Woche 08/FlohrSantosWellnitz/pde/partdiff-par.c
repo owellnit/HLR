@@ -35,7 +35,7 @@ const int ROOT_RANK = 0;
 const int TAG_PREVIOUS_ROW = 1;
 const int TAG_NEXT_ROW = 2;
 
-//Parameter für die calculation mit MPI
+//Parameter für die MPI-Kommunikation
 struct mpi_calc_arguments
 {
     int rank;                       /*Aktueller rank*/
@@ -155,7 +155,7 @@ allocateMatrices (struct calculation_arguments* arguments)
 /* ************************************************************************ */
 static
 void
-allocateMatrices_mpi (struct calculation_arguments* arguments, struct mpi_calc_arguments* mpiArgs)
+allocateMatricesMpi (struct calculation_arguments* arguments, struct mpi_calc_arguments* mpiArgs)
 {
     uint64_t i, j;
     
@@ -275,7 +275,7 @@ initMatrices (struct calculation_arguments* arguments, struct options const* opt
 /* ************************************************************************ */
 static
 void
-initMatrices_mpi (struct calculation_arguments* arguments, struct options const* options, struct mpi_calc_arguments* mpiArgs)
+initMatricesMpi (struct calculation_arguments* arguments, struct options const* options, struct mpi_calc_arguments* mpiArgs)
 {
     uint64_t g, i, j;                                /*  local variables for loops   */
     
@@ -441,7 +441,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 /* ************************************************************************ */
 static
 void
-calculate_mpi (struct calculation_arguments const* arguments, struct calculation_results *results, struct options const* options, struct mpi_calc_arguments* mpiArgs)
+calculateMpiJacobi (struct calculation_arguments const* arguments, struct calculation_results *results, struct options const* options, struct mpi_calc_arguments* mpiArgs)
 {
     int i, j;                                   /* local variables for loops  */
     int m1, m2;                                 /* used as indices for old and new matrices       */
@@ -688,7 +688,7 @@ DisplayMatrix (struct calculation_arguments* arguments, struct calculation_resul
  */
 static
 void
-DisplayMatrix_mpi (struct calculation_arguments* arguments, struct calculation_results* results, struct options* options, int rank, int size, int from, int to)
+DisplayMatrixMpi (struct calculation_arguments* arguments, struct calculation_results* results, struct options* options, int rank, int size, int from, int to)
 {
     int const elements = 8 * options->interlines + 9;
     
@@ -781,20 +781,20 @@ main (int argc, char** argv)
     //Nur wenn Jacobi und mehr als 1 Prozess
     if (options.method == METH_JACOBI && mpiArgs.numberOfProcesses > 1)
     {
-        allocateMatrices_mpi(&arguments, &mpiArgs);
-        initMatrices_mpi(&arguments, &options, &mpiArgs);
+        allocateMatricesMpi(&arguments, &mpiArgs);
+        initMatricesMpi(&arguments, &options, &mpiArgs);
         
         gettimeofday(&start_time, NULL);
-        calculate_mpi(&arguments, &results, &options, &mpiArgs);
+        calculateMpi(&arguments, &results, &options, &mpiArgs);
         gettimeofday(&comp_time, NULL);
         
-        //Nur Root-Rank soll das ergebnis anzeigen
+        //Nur Root-Rank soll das Statistiken anzeigen
         if (mpiArgs.rank == ROOT_RANK)
         {
             displayStatistics(&arguments, &results, &options);
         }
         
-        DisplayMatrix_mpi(&arguments, &results, &options, mpiArgs.rank, mpiArgs.numberOfProcesses, mpiArgs.startRowInTotalMatrix, mpiArgs.startRowInTotalMatrix + mpiArgs.matrixRows -3);
+        DisplayMatrixMpi(&arguments, &results, &options, mpiArgs.rank, mpiArgs.numberOfProcesses, mpiArgs.startRowInTotalMatrix, mpiArgs.startRowInTotalMatrix + mpiArgs.matrixRows -3);
     }
     else
     {

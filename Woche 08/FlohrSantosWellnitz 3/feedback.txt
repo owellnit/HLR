@@ -1,0 +1,11 @@
+Die Bearbeitungszeit bitte in ganzen Stunden angeben (aufrunden).
+In den restlichen Zeilen jeweils ein X in der zutreffenden Spalte setzen.
+
+Bearbeitungszeit: 8 Stunden
+Schwierigkeit:     [ ] zu leicht         [x] genau richtig     [ ] zu schwer
+Lehrreich:         [ ] wenig             [ ] etwas             [x] sehr
+Verständlichkeit:  [ ] großteils unklar  [ ] teilweise unklar  [x] verständlich
+
+Kommentar:
+Aufgabe war gut umsetzbar, wenn man die Verteilung der Matrix hinbekommen hat. Leider haben wir es nicht geschafft ddt zum laufen zu kriegen,
+darum mussten wir vieles durch try and error lösen. Die Fehlersuche hat am meisten Zeit in Anspruch genommen.

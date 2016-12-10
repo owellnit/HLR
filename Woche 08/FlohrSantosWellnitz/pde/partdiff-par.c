@@ -30,18 +30,20 @@
 
 #include "partdiff-par.h"
 
+//Konstanten
 const int ROOT_RANK = 0;
-
 const int TAG_PREVIOUS_ROW = 1;
 const int TAG_NEXT_ROW = 2;
 
 //Parameter für die MPI-Kommunikation
 struct mpi_calc_arguments
 {
+    //MPI-Parameter
     int rank;                       /*Aktueller rank*/
     int numberOfProcesses;          /*Anzahl der Gesamtprozesse*/
     MPI_Status status;              /*Der MPI-Status*/
     
+    //Matrix-Paramter
     uint64_t startRowInTotalMatrix; /*Die Startreihe in der Gesamt-Matrix*/
     uint64_t matrixRows;            /*Anzahl der Teilmatrix-Reihen*/
     uint64_t matrixColumns;         /*Anzahl der Teilmatrix-Spalten*/
@@ -160,10 +162,10 @@ allocateMatricesMpi (struct calculation_arguments* arguments, struct mpi_calc_ar
     uint64_t i, j;
     
     //Reihen für Prozess ermitteln
-    uint64_t rowsPerProcess = (arguments->N + 1) / mpiArgs->numberOfProcesses;
+    const uint64_t rowsPerProcess = (arguments->N + 1) / mpiArgs->numberOfProcesses;
     
     //Anzahl restlicher Reihen
-    int64_t remainRows = (arguments->N + 1) % mpiArgs->numberOfProcesses;
+    const int64_t remainRows = (arguments->N + 1) % mpiArgs->numberOfProcesses;
     
     //Nur eine Reihe addieren, wenn erster oder letzter rank
     //Es wird nur Vor- oder Nachfolger benötigt
@@ -301,12 +303,12 @@ initMatricesMpi (struct calculation_arguments* arguments, struct options const* 
     /* initialize borders, depending on function (function 2: nothing to do) */
     if (options->inf_func == FUNC_F0)
     {
-        const uint64_t startRowInTotalMatrix = mpiArgs->startRowInTotalMatrix; // die erste Zeile wird überprungen
+        uint64_t startRowInTotalMatrix = mpiArgs->startRowInTotalMatrix; 
         
         for (g = 0; g < arguments->num_matrices; g++)
         {
             //Initialisieren der Ränder
-            for (uint64_t i = 0; i < rows; i++)
+            for (uint64_t i = 0; i < rows - 1; i++)
             {
                 Matrix[g][i][0] = 1.0 - (h * (startRowInTotalMatrix + i - 1));
                 Matrix[g][i][N] = h * (startRowInTotalMatrix + i - 1);
@@ -326,7 +328,7 @@ initMatricesMpi (struct calculation_arguments* arguments, struct options const* 
                 //Initialisieren der letzten Reihe
                 for (uint64_t i = 0; i < columns; i++)
                 {
-                    Matrix[g][rows][i] = h * i;
+                    Matrix[g][rows - 1][i] = h * i;
                 }
                 Matrix[g][N][0] = 0;
             }
@@ -455,10 +457,10 @@ calculateMpiJacobi (struct calculation_arguments const* arguments, struct calcul
     //Die Startreihe ist immer 1, denn der Root-Rank soll die erste Matrixzeile nicht berechnen
     //und die anderen Prozesse haben in der ersten Reihe die letzte Reihe des Vorgängers gespeichert
     int startRow = 1;
-    
-    //Die Stopreihe ist immer die vorletzte, denn der  letzte Rank soll die letzte Matrixzeile nicht berechnen
-    //und die anderen Prozesse haben in der letzten Reihe die erste Reihe des Nachfolgers gespeichert
-    int stopRow = mpiArgs->matrixRows - 1;;
+   
+    //Letzte Reihe der Teilmatrix (über diese wird später nicht iteriert, weil sie entweder die erste Reihe des Nachfolgers ist
+    //oder sie ist im letzten Rank die letzte Reihe der Gesamt-Matrix) 
+    int lastRow = mpiArgs->matrixRows - 1;
     
     //Die Berechnung stimmen bei dem Root-Rank bzw letzten Rank nicht, weil der Root-Rank keinen Vorgänger und
     //der letzte keinen Nachfolger hat. Im Folgenden wird ein Senden bzw. Empfangen bei diesen Fällen jedoch verhindert,
@@ -498,16 +500,16 @@ calculateMpiJacobi (struct calculation_arguments const* arguments, struct calcul
         
         /***   Senden und Empfangen der Zeilen   ***/
         
-        //Wenn nicht Root-Rank, dann erste Reihe an Vorgänger senden
+        //Wenn nicht Root-Rank, dann erste eigene Reihe an Vorgänger senden
         if (mpiArgs->rank != ROOT_RANK)
         {
             MPI_Send(Matrix_In[1], mpiArgs->matrixColumns, MPI_DOUBLE, previousTarget, TAG_PREVIOUS_ROW, MPI_COMM_WORLD);
         }
 
-        //Wenn nicht letzter Rank, dann letzte Reihe an Nachfolger senden
+        //Wenn nicht letzter Rank, dann letzte eigene Reihe an Nachfolger senden
         if (mpiArgs->rank != (mpiArgs->numberOfProcesses - 1))
         {
-            MPI_Send(Matrix_In[stopRow - 1], mpiArgs->matrixColumns, MPI_DOUBLE, nextTarget, TAG_NEXT_ROW, MPI_COMM_WORLD);
+            MPI_Send(Matrix_In[lastRow - 1], mpiArgs->matrixColumns, MPI_DOUBLE, nextTarget, TAG_NEXT_ROW, MPI_COMM_WORLD);
         }
 
         //Wenn nicht Root-Rank, dann letzte Reihe vom Vorgänger Empfangen
@@ -519,12 +521,12 @@ calculateMpiJacobi (struct calculation_arguments const* arguments, struct calcul
         //Wenn nicht letzter Rank, erst Reihe vom Nachfolger empfangen
         if (mpiArgs->rank != (mpiArgs->numberOfProcesses - 1))
         {
-            MPI_Recv(Matrix_In[stopRow], mpiArgs->matrixColumns, MPI_DOUBLE,nextTarget, TAG_PREVIOUS_ROW, MPI_COMM_WORLD, &mpiArgs->status);
+            MPI_Recv(Matrix_In[lastRow], mpiArgs->matrixColumns, MPI_DOUBLE,nextTarget, TAG_PREVIOUS_ROW, MPI_COMM_WORLD, &mpiArgs->status);
         }
         
         
         /* over all rows */
-        for (i = startRow; i < stopRow; i++)
+        for (i = startRow; i < lastRow; i++)
         {
             double fpisin_i = 0.0;
             
@@ -536,9 +538,9 @@ calculateMpiJacobi (struct calculation_arguments const* arguments, struct calcul
             /* over all columns */
             for (j = 1; j < (columns - 1); j++)
             {
-                star = 0.25 * (Matrix_In[i-1][j] + Matrix_In[i][j-1] + Matrix_In[i][j+1] + Matrix_In[i+1][j]);
+                star = 0.25 * (Matrix_In[i-1][j] + Matrix_In[i][j-1] + Matrix_In[i][j+1] + Matrix_In[i+1][j]); 
                 
-                if (options->inf_func == FUNC_FPISIN)
+	        if (options->inf_func == FUNC_FPISIN)
                 {
                     star += fpisin_i * sin(pih * (double)j);
                 }
@@ -785,10 +787,10 @@ main (int argc, char** argv)
         initMatricesMpi(&arguments, &options, &mpiArgs);
         
         gettimeofday(&start_time, NULL);
-        calculateMpi(&arguments, &results, &options, &mpiArgs);
+        calculateMpiJacobi(&arguments, &results, &options, &mpiArgs);
         gettimeofday(&comp_time, NULL);
         
-        //Nur Root-Rank soll das Statistiken anzeigen
+        //Nur Root-Rank soll die Statistiken anzeigen
         if (mpiArgs.rank == ROOT_RANK)
         {
             displayStatistics(&arguments, &results, &options);

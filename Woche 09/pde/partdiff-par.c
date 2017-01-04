@@ -643,7 +643,7 @@ calculateMpiGauss (struct calculation_arguments const* arguments, struct calcula
     MPI_Request stopSignal;
     if (options->termination == TERM_PREC && mpiArgs->rank == ROOT_RANK)
     {
-        MPI_Irecv(&stopReceived, 1, MPI_INT, (mpiArgs->numberOfProcesses - 1), TAG_SEND_TERMINATION, MPI_COMM_WORLD, &stopSignal);
+	MPI_Irecv(&stopReceived, 1, MPI_INT, (mpiArgs->numberOfProcesses - 1), TAG_SEND_TERMINATION, MPI_COMM_WORLD, &stopSignal);
     }
     else if (options->termination == TERM_PREC)
     {
@@ -651,26 +651,13 @@ calculateMpiGauss (struct calculation_arguments const* arguments, struct calcula
     }
     
     while (term_iteration > 0)
-    {
-        //Wie das genau mit dem Stop laufen soll, steht noch in den Sternen wie der Star Wars Abspann :D
-        //Wenn Abbruch nach Präzision und Root-Rank, dann irgendwie gucken, obs ein Stopsignal gibt,...
-        if (stopReceived && mpiArgs->rank != (mpiArgs->numberOfProcesses - 1))
-        {
-            MPI_Send(&stopReceived, 1, MPI_INT, nextTarget, TAG_SEND_TERMINATION, MPI_COMM_WORLD);
-        }
-        
+    { 
         if(mpiArgs->rank != ROOT_RANK)
         {
             //Warten auf die Letzte Zeile vom Vorgänger (Startsignal für unsere Iteration). Diese Zeile ist bereits vom Vorgänger berechnet worden.
             //MPI_Recv(LetzteZeileVomVorgaengerEmpfangen);
             MPI_Recv(Matrix_In[0], mpiArgs->matrixColumns, MPI_DOUBLE, previousTarget, TAG_SEND_LOWER_ROW, MPI_COMM_WORLD, &mpiArgs->status);
             
-            //Wenn nötig, das MaxResiduum des Vorgängers empfangen
-            if (options->termination == TERM_PREC)
-            {
-                //MPI_Recv(MaxResiduumVomVorgaengerEmpfangen);
-                MPI_Recv(&prevMaxResiduum, 1, MPI_DOUBLE, previousTarget, TAG_SEND_RESIDUUM, MPI_COMM_WORLD, &mpiArgs->status);
-            }
         }
         
         maxresiduum = 0;
@@ -725,14 +712,17 @@ calculateMpiGauss (struct calculation_arguments const* arguments, struct calcula
             MPI_Recv(Matrix_In[lastRow], mpiArgs->matrixColumns, MPI_DOUBLE, nextTarget, TAG_SEND_UPPER_ROW, MPI_COMM_WORLD, &mpiArgs->status);
       	}
         
-        /* check for stopping calculation, depending on termination method */
+	/* check for stopping calculation, depending on termination method */
         //Das MaxResiduum muss nur weitergereicht werden, wenn die Präzision als Abbruchbedienung gewählt wurde, sonst ist es unnötig
         if (options->termination == TERM_PREC)
         {
             //MaxResiduum ermitteln
             if (mpiArgs->rank != ROOT_RANK)
             {
-                if(prevMaxResiduum > maxresiduum)
+                //MPI_Recv(MaxResiduumVomVorgaengerEmpfangen);
+                MPI_Recv(&prevMaxResiduum, 1, MPI_DOUBLE, previousTarget, TAG_SEND_RESIDUUM, MPI_COMM_WORLD, &mpiArgs->status);
+                
+		if(prevMaxResiduum > maxresiduum)
                 {
                     maxresiduum = prevMaxResiduum;
                 }
@@ -741,6 +731,11 @@ calculateMpiGauss (struct calculation_arguments const* arguments, struct calcula
             if(stopReceived)
             {
 		term_iteration = 0;
+       	 	
+		if (mpiArgs->rank != (mpiArgs->numberOfProcesses - 1))
+        	{
+            		MPI_Send(&stopReceived, 1, MPI_INT, nextTarget, TAG_SEND_TERMINATION, MPI_COMM_WORLD);
+        	}
             }
             
             //MaxResiduum weiter an Nachfolger senden, wenn nicht letzter Rank
@@ -756,7 +751,7 @@ calculateMpiGauss (struct calculation_arguments const* arguments, struct calcula
                 {
                     stopSend = 1;
                     MPI_Send(&stopSend, 1, MPI_INT, ROOT_RANK, TAG_SEND_TERMINATION, MPI_COMM_WORLD);
-                }
+		}
             }
         }
         else if (options->termination == TERM_ITER)

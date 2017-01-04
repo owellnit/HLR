@@ -6,14 +6,14 @@ Program for calculation of partial differential equations.
     Andreas C. Schmidt, TU München.
 ============================================================
 
-Berechnungszeit:    3.325990 s 
+Berechnungszeit:    79.825539 s 
 Speicherbedarf:     32.281868 MiB
-Berechnungsmethode: Gauss-Seidel
+Berechnungsmethode: Gauß-Seidel
 Interlines:         256
 Stoerfunktion:      f(x,y) = 2pi^2*sin(pi*x)sin(pi*y)
-Terminierung:       Anzahl der Iterationen
-Anzahl Iterationen: 512
-Norm des Fehlers:   2.332031e-06
+Terminierung:       Hinreichende Genaugkeit
+Anzahl Iterationen: 513
+Norm des Fehlers:   2.332026e-06
 
 Matrix:
  0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000

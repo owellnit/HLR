@@ -740,15 +740,17 @@ calculateMpiGauss (struct calculation_arguments const* arguments, struct calcula
             
             if(stopReceived)
             {
-                break;
+		term_iteration = 0;
             }
             
             //MaxResiduum weiter an Nachfolger senden, wenn nicht letzter Rank
             if (mpiArgs->rank != (mpiArgs->numberOfProcesses - 1))
             {
                 MPI_Send(&maxresiduum, 1, MPI_DOUBLE, nextTarget, TAG_SEND_RESIDUUM, MPI_COMM_WORLD);
+            }
             
-            
+	    if(mpiArgs->rank == (mpiArgs->numberOfProcesses - 1))
+	    {
                 //Wenn letzter Rank und Präzision erreicht, dann Stopsignal an Root
                 if (maxresiduum < options->term_precision && !stopSend)
                 {

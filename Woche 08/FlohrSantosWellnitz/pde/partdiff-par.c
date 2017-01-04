@@ -441,8 +441,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 /* ************************************************************************ */
 /* calculate: solves the equation                                           */
 /* ************************************************************************ */
-static
-void
+
 calculateMpiJacobi (struct calculation_arguments const* arguments, struct calculation_results *results, struct options const* options, struct mpi_calc_arguments* mpiArgs)
 {
     int i, j;                                   /* local variables for loops  */

@@ -446,7 +446,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 /* ************************************************************************ */
 /* calculate: solves the equation                                           */
 /* ************************************************************************ */
-calculateMpiJacobi (struct calculation_arguments const* arguments, struct calculation_results *results, struct options const* options, struct mpi_calc_arguments* mpiArgs)
+static void calculateMpiJacobi (struct calculation_arguments const* arguments, struct calculation_results *results, struct options const* options, struct mpi_calc_arguments* mpiArgs)
 {
     int i, j;                                   /* local variables for loops  */
     int m1, m2;                                 /* used as indices for old and new matrices       */
@@ -962,7 +962,13 @@ main (int argc, char** argv)
 	AskParams(&options, argc, argv, mpiArgs.rank);
 
 	initVariables(&arguments, &results, &options);
-
+	if(mpiArgs.numberOfProcesses > (options.interlines))
+	{
+		mpiArgs.numberOfProcesses = (options.interlines);
+	}
+	
+	if(mpiArgs.rank < mpiArgs.numberOfProcesses)
+{
     //Nur wenn Jacobi und mehr als 1 Prozess
     if (options.method == METH_JACOBI && mpiArgs.numberOfProcesses > 1)
     {
@@ -1011,7 +1017,7 @@ main (int argc, char** argv)
         DisplayMatrix(&arguments, &results, &options);
         
     }
-    
+    }
     freeMatrices(&arguments);
     MPI_Finalize();
 

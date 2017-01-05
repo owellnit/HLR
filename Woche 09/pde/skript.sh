@@ -14,4 +14,5 @@ then
 export MPICH_NEMESIS_NETMOD=tcp
 fi
 
-mpirun ./partdiff-par 1 1 256 2 1 0.000002332031
+mpirun ./partdiff-par 1 1 256 2 2 512
+#mpirun ./partdiff-par 1 1 256 2 1 0.000002332031

@@ -35,10 +35,10 @@ const int ROOT_RANK = 0;
 const int TAG_PREVIOUS_ROW = 1;
 const int TAG_NEXT_ROW = 2;
 
-#define TAG_SEND_UPPER_ROW 1
-#define TAG_SEND_LOWER_ROW 2
-#define TAG_SEND_RESIDUUM 3
-#define TAG_SEND_TERMINATION 4
+const int TAG_SEND_UPPER_ROW = 1;
+const int TAG_SEND_LOWER_ROW = 2;
+const int TAG_SEND_RESIDUUM = 3;
+const int TAG_SEND_TERMINATION = 4;
 
 //Parameter für die MPI-Kommunikation
 struct mpi_calc_arguments
@@ -1017,7 +1017,7 @@ main (int argc, char** argv)
         DisplayMatrix(&arguments, &results, &options);
         
     }
-    }
+    
     freeMatrices(&arguments);
     MPI_Finalize();
 

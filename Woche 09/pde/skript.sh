@@ -2,7 +2,7 @@
 # Output in "job.out", time and erros in "job.err"
 #SBATCH --output=skript.out
 #SBATCH --error=skript.err
-#SBATCH -p west
+#SBATCH -p abu
 #SBATCH -N 2
 #SBATCH --ntasks-per-node=12
 
@@ -14,5 +14,8 @@ then
 export MPICH_NEMESIS_NETMOD=tcp
 fi
 
-mpirun ./partdiff-par 1 1 23 1 2 512
-#mpirun ./partdiff-par 1 1 256 2 1 0.000002332031
+mpirun ./partdiff-par 1 1 256 1 2 512
+mpirun ./partdiff-par 1 1 256 2 2 512
+mpirun ./partdiff-par 1 2 256 1 2 512
+mpirun ./partdiff-par 1 2 256 2 2 512
+mpirun ./partdiff-par 1 2 256 2 2 1e-6

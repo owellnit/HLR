@@ -1,0 +1,10 @@
+Die Bearbeitungszeit bitte in ganzen Stunden angeben (aufrunden).
+In den restlichen Zeilen jeweils ein X in der zutreffenden Spalte setzen.
+
+Bearbeitungszeit: 8 Stunden
+Schwierigkeit:     [ ] zu leicht         [x] genau richtig     [ ] zu schwer
+Lehrreich:         [ ] wenig             [ ] etwas             [x] sehr
+Verständlichkeit:  [ ] großteils unklar  [ ] teilweise unklar  [x] verständlich
+
+Kommentar:
+Aufgabe war dank der Vorbesprechung gut umsetzbar. Die Reihenfolge der Sends und Receives war teilweise sehr kritisch, weil so teilweise mehrere Prozesse aufeinander gewartet haben. Wir mussten durch printf’s verteilen versuchen, die Stellen im Code finden. Das hat sehr viel Zeit gekostet. 

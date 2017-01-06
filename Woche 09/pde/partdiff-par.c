@@ -607,7 +607,7 @@ calculateMpiGauss (struct calculation_arguments const* arguments, struct calcula
     double const h = arguments->h;
     int columns = mpiArgs->matrixColumns;
     uint64_t startRowInTotalMatrix = mpiArgs->startRowInTotalMatrix;
-    
+if(mpiArgs->rank < mpiArgs->numberOfProcesses){    
     //Die Startreihe ist immer 1, denn der Root-Rank soll die erste Matrixzeile nicht berechnen
     //und die anderen Prozesse haben in der ersten Reihe die letzte Reihe des Vorgängers gespeichert
     int startRow = 1;
@@ -765,7 +765,7 @@ calculateMpiGauss (struct calculation_arguments const* arguments, struct calcula
             term_iteration--;
         }
     }
-    
+    }
     //Auf alle Prozesse warten...
     MPI_Barrier(MPI_COMM_WORLD);
     
@@ -968,7 +968,13 @@ main (int argc, char** argv)
 	AskParams(&options, argc, argv, mpiArgs.rank);
 
 	initVariables(&arguments, &results, &options);
-    
+	int interlines = options.interlines;
+	if(mpiArgs.numberOfProcesses > interlines)
+	{
+		mpiArgs.numberOfProcesses = interlines;
+	}    
+	
+printf("%i\n", mpiArgs.rank);
     //Nur wenn Jacobi und mehr als 1 Prozess
     if (options.method == METH_JACOBI && mpiArgs.numberOfProcesses > 1)
     {
@@ -1017,7 +1023,6 @@ main (int argc, char** argv)
         DisplayMatrix(&arguments, &results, &options);
         
     }
-    
     freeMatrices(&arguments);
     MPI_Finalize();
 

@@ -13,5 +13,5 @@ if [ "${SLURM_PARTITION}" != 'abu' ]
 then
 export MPICH_NEMESIS_NETMOD=tcp
 fi
-mpirun ./partdiff-par 1 1 256 1 2 512
-#mpirun ./partdiff-par 1 1 256 2 1 0.000002332031
+mpirun ./partdiff-par 1 1 23 1 2 512
+#mpirun ./partdiff-par 1 1 23 2 1 0.000002332031

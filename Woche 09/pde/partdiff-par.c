@@ -161,76 +161,72 @@ static
 void
 allocateMatricesMpi (struct calculation_arguments* arguments, struct mpi_calc_arguments* mpiArgs)
 {
-    //Nur für Prozesse Speicher reservieren, die auch rechnen sollen
-    if(mpiArgs->rank < mpiArgs->numberOfProcesses)
+    uint64_t i, j;
+    
+    //Reihen für Prozess ermitteln
+    const uint64_t rowsPerProcess = (arguments->N + 1) / mpiArgs->numberOfProcesses;
+    
+    //Anzahl restlicher Reihen
+    const int64_t remainRows = (arguments->N + 1) % mpiArgs->numberOfProcesses;
+    
+    //Nur eine Reihe addieren, wenn erster oder letzter rank
+    //Es wird nur Vor- oder Nachfolger benötigt
+    if (mpiArgs->rank == ROOT_RANK || mpiArgs->rank == (mpiArgs->numberOfProcesses - 1))
     {
-        uint64_t i, j;
+        mpiArgs->matrixRows  = rowsPerProcess + 1;
+    }
+    //Zwei addieren, wegen letzte Reihe Vorgänger und erste Reihe Nachfolger
+    else
+    {
+        mpiArgs->matrixRows  = rowsPerProcess + 2;
+    }
+    
+    //Anzahl Columns ermitteln
+    mpiArgs->matrixColumns = arguments->N + 1;
+    
+    //Restliche Reihen aufteilen, wenn Prozessnummer kleiner Anzahl restlichen Reihen
+    if (mpiArgs->rank < remainRows)
+    {
+        mpiArgs->matrixRows  += 1;
+    }
+    
+    //Speicher für Matrixen reservieren
+    arguments->M = allocateMemory(arguments->num_matrices * (mpiArgs->matrixRows  * mpiArgs->matrixColumns) * sizeof(double));
+    arguments->Matrix = allocateMemory(arguments->num_matrices * sizeof(double**));
+    
+    
+    for (i = 0; i < arguments->num_matrices; i++)
+    {
+        arguments->Matrix[i] = allocateMemory((mpiArgs->matrixRows) * sizeof(double*));
         
-        //Reihen für Prozess ermitteln
-        const uint64_t rowsPerProcess = (arguments->N + 1) / mpiArgs->numberOfProcesses;
-        
-        //Anzahl restlicher Reihen
-        const int64_t remainRows = (arguments->N + 1) % mpiArgs->numberOfProcesses;
-        
-        //Nur eine Reihe addieren, wenn erster oder letzter rank
-        //Es wird nur Vor- oder Nachfolger benötigt
-        if (mpiArgs->rank == ROOT_RANK || mpiArgs->rank == (mpiArgs->numberOfProcesses - 1))
+        for (j = 0; j < mpiArgs->matrixRows; j++)
         {
-            mpiArgs->matrixRows  = rowsPerProcess + 1;
+            arguments->Matrix[i][j] = arguments->M + (i * mpiArgs->matrixRows * mpiArgs->matrixColumns) + (j * mpiArgs->matrixColumns);
         }
-        //Zwei addieren, wegen letzte Reihe Vorgänger und erste Reihe Nachfolger
-        else
-        {
-            mpiArgs->matrixRows  = rowsPerProcess + 2;
-        }
-        
-        //Anzahl Columns ermitteln
-        mpiArgs->matrixColumns = arguments->N + 1;
-        
-        //Restliche Reihen aufteilen, wenn Prozessnummer kleiner Anzahl restlichen Reihen
-        if (mpiArgs->rank < remainRows)
-        {
-            mpiArgs->matrixRows  += 1;
-        }
-        
-        //Speicher für Matrixen reservieren
-        arguments->M = allocateMemory(arguments->num_matrices * (mpiArgs->matrixRows  * mpiArgs->matrixColumns) * sizeof(double));
-        arguments->Matrix = allocateMemory(arguments->num_matrices * sizeof(double**));
-        
-        
-        for (i = 0; i < arguments->num_matrices; i++)
-        {
-            arguments->Matrix[i] = allocateMemory((mpiArgs->matrixRows) * sizeof(double*));
-            
-            for (j = 0; j < mpiArgs->matrixRows; j++)
-            {
-                arguments->Matrix[i][j] = arguments->M + (i * mpiArgs->matrixRows * mpiArgs->matrixColumns) + (j * mpiArgs->matrixColumns);
-            }
-        }
-        
-        int actual_splitted_remain_rows = 0;
-        
-        //Wenn Rank keine Extra-Reihe bekommen hat, dann müssen alle übergebliebenen Reihen hinzuaddiert werden
-        if (mpiArgs->rank > remainRows)
-        {
-            actual_splitted_remain_rows = remainRows;
-        }
-        //Sonst müssen die bisherigen Extra-Reihen aufaddiert werden, die bisher aufgeteilt wurden (=Wert aktueller Rank)
-        else
-        {
-            actual_splitted_remain_rows = mpiArgs->rank;
-        }
-        
-        //Root-Rank startet bei 1, weil die erste Reihe der Matrix nicht berechnet wird
-        if(mpiArgs->rank == ROOT_RANK)
-        {
-            mpiArgs->startRowInTotalMatrix = 1;
-        }
-        else
-        {
-            //Startreihe des Prozesses in der Gesamt-Matrix berechnen
-            mpiArgs->startRowInTotalMatrix = (rowsPerProcess * mpiArgs->rank) + actual_splitted_remain_rows;
-        }
+    }
+    
+    int actual_splitted_remain_rows = 0;
+    
+    //Wenn Rank keine Extra-Reihe bekommen hat, dann müssen alle übergebliebenen Reihen hinzuaddiert werden
+    if (mpiArgs->rank > remainRows)
+    {
+        actual_splitted_remain_rows = remainRows;
+    }
+    //Sonst müssen die bisherigen Extra-Reihen aufaddiert werden, die bisher aufgeteilt wurden (=Wert aktueller Rank)
+    else
+    {
+        actual_splitted_remain_rows = mpiArgs->rank;
+    }
+    
+    //Root-Rank startet bei 1, weil die erste Reihe der Matrix nicht berechnet wird
+    if(mpiArgs->rank == ROOT_RANK)
+    {
+        mpiArgs->startRowInTotalMatrix = 1;
+    }
+    else
+    {
+        //Startreihe des Prozesses in der Gesamt-Matrix berechnen
+        mpiArgs->startRowInTotalMatrix = (rowsPerProcess * mpiArgs->rank) + actual_splitted_remain_rows;
     }
 }
 
@@ -285,62 +281,58 @@ static
 void
 initMatricesMpi (struct calculation_arguments* arguments, struct options const* options, struct mpi_calc_arguments* mpiArgs)
 {
-    //Nur Prozesse initialisieren, die auch rechnen sollen
-    if(mpiArgs->rank < mpiArgs->numberOfProcesses)
+    uint64_t g, i, j;                                /*  local variables for loops   */
+
+    const uint64_t rows = mpiArgs->matrixRows;
+    const uint64_t columns = mpiArgs->matrixColumns;
+
+    double const h = arguments->h;
+    uint64_t const N = arguments->N;
+    double*** Matrix = arguments->Matrix;
+
+    /* initialize matrix/matrices with zeros */
+    for (g = 0; g < arguments->num_matrices; g++)
     {
-        uint64_t g, i, j;                                /*  local variables for loops   */
-    
-        const uint64_t rows = mpiArgs->matrixRows;
-        const uint64_t columns = mpiArgs->matrixColumns;
-    
-        double const h = arguments->h;
-        uint64_t const N = arguments->N;
-        double*** Matrix = arguments->Matrix;
-    
-        /* initialize matrix/matrices with zeros */
-        for (g = 0; g < arguments->num_matrices; g++)
+        for (i = 1; i < rows; i++)
         {
-            for (i = 1; i < rows; i++)
+            for (j = 0; j < columns; j++)
             {
-                for (j = 0; j < columns; j++)
-                {
-                    Matrix[g][i][j] = 0.0;
-                }
+                Matrix[g][i][j] = 0.0;
             }
         }
+    }
+    
+    /* initialize borders, depending on function (function 2: nothing to do) */
+    if (options->inf_func == FUNC_F0)
+    {
+        uint64_t startRowInTotalMatrix = mpiArgs->startRowInTotalMatrix; 
         
-        /* initialize borders, depending on function (function 2: nothing to do) */
-        if (options->inf_func == FUNC_F0)
+        for (g = 0; g < arguments->num_matrices; g++)
         {
-            uint64_t startRowInTotalMatrix = mpiArgs->startRowInTotalMatrix; 
-            
-            for (g = 0; g < arguments->num_matrices; g++)
+           //Initialisieren der Ränder
+           for (uint64_t i = 0; i < rows; i++)
             {
-               //Initialisieren der Ränder
-               for (uint64_t i = 0; i < rows; i++)
+                Matrix[g][i][0] = 1.0 - (h * (startRowInTotalMatrix + i - 1));
+                Matrix[g][i][N] = h * (startRowInTotalMatrix + i - 1);
+            }
+            
+            if (mpiArgs->rank == ROOT_RANK)
+            {
+                //Initialisieren der ersten Reihe
+                for (uint64_t i = 0; i < columns; i++)
                 {
-                    Matrix[g][i][0] = 1.0 - (h * (startRowInTotalMatrix + i - 1));
-                    Matrix[g][i][N] = h * (startRowInTotalMatrix + i - 1);
+                    Matrix[g][0][i] = 1.0 - (h * i);
                 }
-                
-                if (mpiArgs->rank == ROOT_RANK)
+                Matrix[g][0][N] = 0;
+            }
+            else if (mpiArgs->rank == (mpiArgs->numberOfProcesses - 1))
+            {
+                //Initialisieren der letzten Reihe
+                for (uint64_t i = 0; i < columns; i++)
                 {
-                    //Initialisieren der ersten Reihe
-                    for (uint64_t i = 0; i < columns; i++)
-                    {
-                        Matrix[g][0][i] = 1.0 - (h * i);
-                    }
-                    Matrix[g][0][N] = 0;
+                    Matrix[g][rows - 1][i] = h * i;
                 }
-                else if (mpiArgs->rank == (mpiArgs->numberOfProcesses - 1))
-                {
-                    //Initialisieren der letzten Reihe
-                    for (uint64_t i = 0; i < columns; i++)
-                    {
-                        Matrix[g][rows - 1][i] = h * i;
-                    }
-                    Matrix[g][rows - 1][0] = 0;
-                }
+                Matrix[g][rows - 1][0] = 0;
             }
         }
     }
@@ -453,7 +445,6 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 /* ************************************************************************ */
 static void calculateMpiJacobi (struct calculation_arguments const* arguments, struct calculation_results *results, struct options const* options, struct mpi_calc_arguments* mpiArgs)
 {
-    if(mpiArgs->rank < mpiArgs->numberOfProcesses){
     int i, j;                                   /* local variables for loops  */
     int m1, m2;                                 /* used as indices for old and new matrices       */
     double star;                                /* four times center value minus 4 neigh.b values */
@@ -596,7 +587,6 @@ static void calculateMpiJacobi (struct calculation_arguments const* arguments, s
     
     results->m = m2;
 }
-}
 
 /* ************************************************************************ */
 /* calculate: solves the equation                                           */
@@ -604,7 +594,7 @@ static void calculateMpiJacobi (struct calculation_arguments const* arguments, s
 static
 void
 calculateMpiGauss (struct calculation_arguments const* arguments, struct calculation_results *results, struct options const* options, struct mpi_calc_arguments* mpiArgs)
-{if(mpiArgs->rank < mpiArgs->numberOfProcesses){
+{
     //Initialisierung ist fast identisch mit Jacobi, außer dass nur eine Matrix benötigt wird.
     int i, j;                                   /* local variables for loops  */
     int m1, m2;                                 /* used as indices for old and new matrices */
@@ -777,7 +767,7 @@ calculateMpiGauss (struct calculation_arguments const* arguments, struct calcula
     }
     //Auf alle Prozesse warten...
     MPI_Barrier(MPI_COMM_WORLD);
-}    
+ 
     //... und danach das MaxReisduum aller Prozesse ermitteln
     double maxresiduumOverAllProcesses;
     MPI_Allreduce(&maxresiduum, &maxresiduumOverAllProcesses, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
@@ -986,63 +976,66 @@ main (int argc, char** argv)
 		mpiArgs.numberOfProcesses = interlines;
 	}    
 
-	if(mpiArgs.rank < mpiArgs.numberOfProcesses){	
-    //Nur wenn Jacobi und mehr als 1 Prozess
-    if (options.method == METH_JACOBI && mpiArgs.numberOfProcesses > 1)
+    //Nur Prozesse, die Berechnen sollen, rechnen lassen
+	if(mpiArgs.rank < mpiArgs.numberOfProcesses)
     {
-        allocateMatricesMpi(&arguments, &mpiArgs);
-        initMatricesMpi(&arguments, &options, &mpiArgs);
-        
-        gettimeofday(&start_time, NULL);
-        calculateMpiJacobi(&arguments, &results, &options, &mpiArgs);
-        gettimeofday(&comp_time, NULL);
-        
-        //Nur Root-Rank soll die Statistiken anzeigen
-        if (mpiArgs.rank == ROOT_RANK)
+        //Nur wenn Jacobi und mehr als 1 Prozess
+        if (options.method == METH_JACOBI && mpiArgs.numberOfProcesses > 1)
         {
-            displayStatistics(&arguments, &results, &options);
-        }
-        if(mpiArgs.rank < mpiArgs.numberOfProcesses)
-	{ 
-        	DisplayMatrixMpi(&arguments, &results, &options, mpiArgs.rank, mpiArgs.numberOfProcesses, mpiArgs.startRowInTotalMatrix, mpiArgs.startRowInTotalMatrix + mpiArgs.matrixRows -3);
-    	}
-    }
-    //Nur wenn Gauss-Seidel und mehr als 1 Prozess
-    else if(options.method == METH_GAUSS_SEIDEL && mpiArgs.numberOfProcesses > 1)
-    {
-        allocateMatricesMpi(&arguments, &mpiArgs);
-        initMatricesMpi(&arguments, &options, &mpiArgs);
-    
-        gettimeofday(&start_time, NULL);
-        calculateMpiGauss(&arguments, &results, &options, &mpiArgs);
-        gettimeofday(&comp_time, NULL);
-    
-        //Nur Root-Rank soll die Statistiken anzeigen
-        if (mpiArgs.rank == ROOT_RANK && mpiArgs.rank < mpiArgs.numberOfProcesses)
-        {
-            displayStatistics(&arguments, &results, &options);
-        }
-    
-        if(mpiArgs.rank < mpiArgs.numberOfProcesses)
-        {
+            allocateMatricesMpi(&arguments, &mpiArgs);
+            initMatricesMpi(&arguments, &options, &mpiArgs);
+            
+            gettimeofday(&start_time, NULL);
+            calculateMpiJacobi(&arguments, &results, &options, &mpiArgs);
+            gettimeofday(&comp_time, NULL);
+            
+            //Nur Root-Rank soll die Statistiken anzeigen
+            if (mpiArgs.rank == ROOT_RANK)
+            {
+                displayStatistics(&arguments, &results, &options);
+            }
+            if(mpiArgs.rank < mpiArgs.numberOfProcesses)
+            {
                 DisplayMatrixMpi(&arguments, &results, &options, mpiArgs.rank, mpiArgs.numberOfProcesses, mpiArgs.startRowInTotalMatrix, mpiArgs.startRowInTotalMatrix + mpiArgs.matrixRows -3);
+            }
+        }
+        //Nur wenn Gauss-Seidel und mehr als 1 Prozess
+        else if(options.method == METH_GAUSS_SEIDEL && mpiArgs.numberOfProcesses > 1)
+        {
+            allocateMatricesMpi(&arguments, &mpiArgs);
+            initMatricesMpi(&arguments, &options, &mpiArgs);
+        
+            gettimeofday(&start_time, NULL);
+            calculateMpiGauss(&arguments, &results, &options, &mpiArgs);
+            gettimeofday(&comp_time, NULL);
+        
+            //Nur Root-Rank soll die Statistiken anzeigen
+            if (mpiArgs.rank == ROOT_RANK && mpiArgs.rank < mpiArgs.numberOfProcesses)
+            {
+                displayStatistics(&arguments, &results, &options);
+            }
+        
+            if(mpiArgs.rank < mpiArgs.numberOfProcesses)
+            {
+                    DisplayMatrixMpi(&arguments, &results, &options, mpiArgs.rank, mpiArgs.numberOfProcesses, mpiArgs.startRowInTotalMatrix, mpiArgs.startRowInTotalMatrix + mpiArgs.matrixRows -3);
+            }
+        }
+        else
+        {
+            allocateMatrices(&arguments);
+            initMatrices(&arguments, &options);
+
+            gettimeofday(&start_time, NULL);
+            calculate(&arguments, &results, &options);
+            gettimeofday(&comp_time, NULL);
+
+            displayStatistics(&arguments, &results, &options);
+            DisplayMatrix(&arguments, &results, &options);
+            
         }
     }
-    else
-    {
-        allocateMatrices(&arguments);
-        initMatrices(&arguments, &options);
-
-        gettimeofday(&start_time, NULL);
-        calculate(&arguments, &results, &options);
-        gettimeofday(&comp_time, NULL);
-
-        displayStatistics(&arguments, &results, &options);
-        DisplayMatrix(&arguments, &results, &options);
-        
-    }
-}
-    MPI_Barrier(MPI_COMM_WORLD);
+    
+    //MPI_Barrier(MPI_COMM_WORLD);
     freeMatrices(&arguments);
     MPI_Finalize();
 

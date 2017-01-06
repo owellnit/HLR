@@ -312,8 +312,8 @@ initMatricesMpi (struct calculation_arguments* arguments, struct options const* 
         
         for (g = 0; g < arguments->num_matrices; g++)
         {
-            //Initialisieren der Ränder
-            for (uint64_t i = 0; i < rows - 1; i++)
+           //Initialisieren der Ränder
+           for (uint64_t i = 0; i < rows; i++)
             {
                 Matrix[g][i][0] = 1.0 - (h * (startRowInTotalMatrix + i - 1));
                 Matrix[g][i][N] = h * (startRowInTotalMatrix + i - 1);
@@ -335,7 +335,7 @@ initMatricesMpi (struct calculation_arguments* arguments, struct options const* 
                 {
                     Matrix[g][rows - 1][i] = h * i;
                 }
-                Matrix[g][N][0] = 0;
+                Matrix[g][rows - 1][0] = 0;
             }
         }
     }

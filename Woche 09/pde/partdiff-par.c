@@ -453,6 +453,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 /* ************************************************************************ */
 static void calculateMpiJacobi (struct calculation_arguments const* arguments, struct calculation_results *results, struct options const* options, struct mpi_calc_arguments* mpiArgs)
 {
+    if(mpiArgs->rank < mpiArgs->numberOfProcesses){
     int i, j;                                   /* local variables for loops  */
     int m1, m2;                                 /* used as indices for old and new matrices       */
     double star;                                /* four times center value minus 4 neigh.b values */
@@ -595,6 +596,7 @@ static void calculateMpiJacobi (struct calculation_arguments const* arguments, s
     
     results->m = m2;
 }
+}
 
 /* ************************************************************************ */
 /* calculate: solves the equation                                           */
@@ -602,7 +604,7 @@ static void calculateMpiJacobi (struct calculation_arguments const* arguments, s
 static
 void
 calculateMpiGauss (struct calculation_arguments const* arguments, struct calculation_results *results, struct options const* options, struct mpi_calc_arguments* mpiArgs)
-{
+{if(mpiArgs->rank < mpiArgs->numberOfProcesses){
     //Initialisierung ist fast identisch mit Jacobi, außer dass nur eine Matrix benötigt wird.
     int i, j;                                   /* local variables for loops  */
     int m1, m2;                                 /* used as indices for old and new matrices */
@@ -655,12 +657,12 @@ calculateMpiGauss (struct calculation_arguments const* arguments, struct calcula
         if (options->termination == TERM_PREC && mpiArgs->rank == ROOT_RANK)
         {
             //Der Root-Prozess hört auf den letzten Prozess
-            MPI_Irecv(&stopCalculate, 1, MPI_INT, (mpiArgs->numberOfProcesses - 1), TAG_SEND_TERMINATION, MPI_COMM_WORLD, &stopSignal);
+            MPI_Irecv(&stopCalculate, 1, MPI_INT, (mpiArgs->numberOfProcesses - 1), TAG_TERMINATION, MPI_COMM_WORLD, &stopSignal);
         }
         else if (options->termination == TERM_PREC)
         {
             //Die anderen auf ihren Vorgänger
-            MPI_Irecv(&stopCalculate, 1, MPI_INT, previousTarget, TAG_SEND_TERMINATION, MPI_COMM_WORLD, &stopSignal);
+            MPI_Irecv(&stopCalculate, 1, MPI_INT, previousTarget, TAG_TERMINATION, MPI_COMM_WORLD, &stopSignal);
         }
     
         while (term_iteration > 0)
@@ -731,7 +733,7 @@ calculateMpiGauss (struct calculation_arguments const* arguments, struct calcula
                 if (mpiArgs->rank != ROOT_RANK)
                 {
                     //MaxResiduum vom Vorgänger empfangen und mit eigenem prüfen
-                    MPI_Recv(&prevMaxResiduum, 1, MPI_DOUBLE, previousTarget, TAG_SEND_RESIDUUM, MPI_COMM_WORLD, &mpiArgs->status);
+                    MPI_Recv(&prevMaxResiduum, 1, MPI_DOUBLE, previousTarget, TAG_RESIDUUM, MPI_COMM_WORLD, &mpiArgs->status);
                 
                     if(prevMaxResiduum > maxresiduum)
                     {
@@ -748,14 +750,14 @@ calculateMpiGauss (struct calculation_arguments const* arguments, struct calcula
                     //Nachfolger bescheid sagen, dass er aufhören soll
                     if (mpiArgs->rank != (mpiArgs->numberOfProcesses - 1))
                     {
-                        MPI_Send(&stopReceive, 1, MPI_INT, nextTarget, TAG_SEND_TERMINATION, MPI_COMM_WORLD);
+                        MPI_Send(&stopCalculate, 1, MPI_INT, nextTarget, TAG_TERMINATION, MPI_COMM_WORLD);
                     }
                 }
             
                 //MaxResiduum weiter an Nachfolger senden, wenn nicht letzter Rank
                 if (mpiArgs->rank != (mpiArgs->numberOfProcesses - 1))
                 {
-                    MPI_Send(&maxresiduum, 1, MPI_DOUBLE, nextTarget, TAG_SEND_RESIDUUM, MPI_COMM_WORLD);
+                    MPI_Send(&maxresiduum, 1, MPI_DOUBLE, nextTarget, TAG_RESIDUUM, MPI_COMM_WORLD);
                 }
                 else if(mpiArgs->rank == (mpiArgs->numberOfProcesses - 1))
                 {
@@ -763,7 +765,7 @@ calculateMpiGauss (struct calculation_arguments const* arguments, struct calcula
                     if (maxresiduum < options->term_precision && !stopSend)
                     {
                         stopSend = 1;
-                        MPI_Send(&stopSend, 1, MPI_INT, ROOT_RANK, TAG_SEND_TERMINATION, MPI_COMM_WORLD);
+                        MPI_Send(&stopSend, 1, MPI_INT, ROOT_RANK, TAG_TERMINATION, MPI_COMM_WORLD);
                     }
                 }
             }
@@ -775,13 +777,14 @@ calculateMpiGauss (struct calculation_arguments const* arguments, struct calcula
     }
     //Auf alle Prozesse warten...
     MPI_Barrier(MPI_COMM_WORLD);
-    
+}    
     //... und danach das MaxReisduum aller Prozesse ermitteln
     double maxresiduumOverAllProcesses;
     MPI_Allreduce(&maxresiduum, &maxresiduumOverAllProcesses, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
     results->stat_precision = maxresiduumOverAllProcesses;
     
     results->m = m1;
+
 }
 
 
@@ -982,7 +985,8 @@ main (int argc, char** argv)
 	{
 		mpiArgs.numberOfProcesses = interlines;
 	}    
-	
+
+	if(mpiArgs.rank < mpiArgs.numberOfProcesses){	
     //Nur wenn Jacobi und mehr als 1 Prozess
     if (options.method == METH_JACOBI && mpiArgs.numberOfProcesses > 1)
     {
@@ -998,8 +1002,10 @@ main (int argc, char** argv)
         {
             displayStatistics(&arguments, &results, &options);
         }
-        
-        DisplayMatrixMpi(&arguments, &results, &options, mpiArgs.rank, mpiArgs.numberOfProcesses, mpiArgs.startRowInTotalMatrix, mpiArgs.startRowInTotalMatrix + mpiArgs.matrixRows -3);
+        if(mpiArgs.rank < mpiArgs.numberOfProcesses)
+	{ 
+        	DisplayMatrixMpi(&arguments, &results, &options, mpiArgs.rank, mpiArgs.numberOfProcesses, mpiArgs.startRowInTotalMatrix, mpiArgs.startRowInTotalMatrix + mpiArgs.matrixRows -3);
+    	}
     }
     //Nur wenn Gauss-Seidel und mehr als 1 Prozess
     else if(options.method == METH_GAUSS_SEIDEL && mpiArgs.numberOfProcesses > 1)
@@ -1012,12 +1018,15 @@ main (int argc, char** argv)
         gettimeofday(&comp_time, NULL);
     
         //Nur Root-Rank soll die Statistiken anzeigen
-        if (mpiArgs.rank == ROOT_RANK)
+        if (mpiArgs.rank == ROOT_RANK && mpiArgs.rank < mpiArgs.numberOfProcesses)
         {
             displayStatistics(&arguments, &results, &options);
         }
     
-        DisplayMatrixMpi(&arguments, &results, &options, mpiArgs.rank, mpiArgs.numberOfProcesses, mpiArgs.startRowInTotalMatrix, mpiArgs.startRowInTotalMatrix + mpiArgs.matrixRows -3);
+        if(mpiArgs.rank < mpiArgs.numberOfProcesses)
+        {
+                DisplayMatrixMpi(&arguments, &results, &options, mpiArgs.rank, mpiArgs.numberOfProcesses, mpiArgs.startRowInTotalMatrix, mpiArgs.startRowInTotalMatrix + mpiArgs.matrixRows -3);
+        }
     }
     else
     {
@@ -1032,6 +1041,8 @@ main (int argc, char** argv)
         DisplayMatrix(&arguments, &results, &options);
         
     }
+}
+    MPI_Barrier(MPI_COMM_WORLD);
     freeMatrices(&arguments);
     MPI_Finalize();
 
